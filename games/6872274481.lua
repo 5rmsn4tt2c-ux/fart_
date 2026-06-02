@@ -634,9 +634,11 @@ run(function()
 					end))
 				else
 					entity.Targetable = entitylib.targetCheck(entity)
-					table.insert(entity.Connections, hum.AnimationPlayed:Connect(function(track)
-						entitylib.Events.AnimationPlayed:Fire(plr, track)
-					end))
+					if plr ~= nil then
+						table.insert(entity.Connections, hum.AnimationPlayed:Connect(function(track)
+							entitylib.Events.AnimationPlayed:Fire(plr, track)
+						end))
+					end
 					
 					for _, v in entitylib.getUpdateConnections(entity) do
 						table.insert(entity.Connections, v:Connect(function()
@@ -783,6 +785,7 @@ run(function()
 		DefaultKillEffect = require(lplr.PlayerScripts.TS.controllers.global.locker['kill-effect'].effects['default-kill-effect']),
 		EnchantMeta = require(replicatedStorage.TS.enchant['enchant-meta']).EnchantMeta,
 		EmoteType = require(replicatedStorage.TS.locker.emote['emote-type']).EmoteType,
+		GamePlayer = require(replicatedStorage.TS.player['game-player']),
 		GameAnimationUtil = require(replicatedStorage.TS.animation['animation-util']).GameAnimationUtil,
 		getIcon = function(item, showinv)
 			local itemmeta = bedwars.ItemMeta[item.itemType]
@@ -4819,30 +4822,28 @@ run(function()
         Tooltip = 'Attachs you to the nearest target',
         Function = function(call)
             if call then
-                LPH_NO_VIRTUALIZE(function()
-                    repeat
-                        if entitylib.isAlive then
-                            local plr = entitylib.AllPosition({
-                                Range = Range.Value,
-                                Wallcheck = Targets.Walls.Enabled or nil,
-                                Part = 'RootPart',
-                                Players = Targets.Players.Enabled,
-                                NPCs = Targets.NPCs.Enabled,
-                                Limit = 1,
-                                Sort = function(a, b)
-                                    return a.Entity.Health < b.Entity.Health
-                                end
-                            })[1]
-                            if plr then
-                                rayCheck.FilterDescendantsInstances = {plr.RootPart.Parent, lplr.Character}
-    
-                                entitylib.character.RootPart.AssemblyLinearVelocity = Vector3.new(0, entitylib.character.RootPart.Size.Y / 2 + entitylib.character.Humanoid.HipHeight + 0.25 * 3, 0)
-                                entitylib.character.RootPart.CFrame = plr.RootPart.CFrame + (not workspace:Raycast(plr.RootPart.Position, plr.RootPart.CFrame.LookVector, rayCheck) and (plr.RootPart.CFrame.LookVector * 1.4) or Vector3.zero)
+                repeat
+                    if entitylib.isAlive then
+                        local plr = entitylib.AllPosition({
+                            Range = Range.Value,
+                            Wallcheck = Targets.Walls.Enabled or nil,
+                            Part = 'RootPart',
+                            Players = Targets.Players.Enabled,
+                            NPCs = Targets.NPCs.Enabled,
+                            Limit = 1,
+                            Sort = function(a, b)
+                                return a.Entity.Health < b.Entity.Health
                             end
+                        })[1]
+                        if plr then
+                            rayCheck.FilterDescendantsInstances = {plr.RootPart.Parent, lplr.Character}
+    
+                            entitylib.character.RootPart.AssemblyLinearVelocity = Vector3.new(0, entitylib.character.RootPart.Size.Y / 2 + entitylib.character.Humanoid.HipHeight + 0.25 * 3, 0)
+                            entitylib.character.RootPart.CFrame = plr.RootPart.CFrame + (not workspace:Raycast(plr.RootPart.Position, plr.RootPart.CFrame.LookVector, rayCheck) and (plr.RootPart.CFrame.LookVector * 1.4) or Vector3.zero)
                         end
-                        task.wait()
-                    until not PlayerAttach.Enabled
-                end)()
+                    end
+                    task.wait()
+                until not PlayerAttach.Enabled
             end
         end
     })
@@ -8777,40 +8778,38 @@ run(function()
     	Name = 'Auto Shoot',
     	Function = function(call)
     		if call then
-    			LPH_NO_VIRTUALIZE(function()
-    				local start = tick()
-    				repeat
-    					if store.hand.toolType == 'sword' then
-    						if (tick() - bedwars.SwordController.lastSwing) < 0.29 then
-    							if tick() > start then
-    								for _, data in getProjectiles() do
-    									if (FireRate[data[1].itemType] or 0) < tick() then
-    										local hotbar, old = getHotbar(data[1].tool), store.hand.tool and getHotbar(store.hand.tool) or 0
-    										if hotbar and old and hotbarSwitch(hotbar) then
-    											local ignore = vape.Modules['Silent Aura'].Enabled or not inputService.MouseEnabled
-    											task.wait(Delay.Value)
-    											shootFunc()
-    											if vape.Modules['Auto Clicker'].Enabled and not ignore then
-    												task.delay(runService.PostSimulation:Wait(), mouse1press)
-    											end
-    											task.wait(Delay.Value)
-    											FireRate[data[1].itemType] = tick() + (data[4].fireDelaySec + Rate:GetRandomValue())
-    											hotbarSwitch(old)
-    											task.wait(Next.Value)
-    											if (tick() - bedwars.SwordController.lastSwing) > 0.29 then
-    												break
-    											end
+    			local start = tick()
+    			repeat
+    				if store.hand.toolType == 'sword' then
+    					if (tick() - bedwars.SwordController.lastSwing) < 0.29 then
+    						if tick() > start then
+    							for _, data in getProjectiles() do
+    								if (FireRate[data[1].itemType] or 0) < tick() then
+    									local hotbar, old = getHotbar(data[1].tool), store.hand.tool and getHotbar(store.hand.tool) or 0
+    									if hotbar and old and hotbarSwitch(hotbar) then
+    										local ignore = vape.Modules['Silent Aura'].Enabled or not inputService.MouseEnabled
+    										task.wait(Delay.Value)
+    										shootFunc()
+    										if vape.Modules['Auto Clicker'].Enabled and not ignore then
+    											task.delay(runService.PostSimulation:Wait(), mouse1press)
+    										end
+    										task.wait(Delay.Value)
+    										FireRate[data[1].itemType] = tick() + (data[4].fireDelaySec + Rate:GetRandomValue())
+    										hotbarSwitch(old)
+    										task.wait(Next.Value)
+    										if (tick() - bedwars.SwordController.lastSwing) > 0.29 then
+    											break
     										end
     									end
     								end
     							end
-    						else
-    							start = tick() + 0.75
     						end
+    					else
+    						start = tick() + 0.75
     					end
-    					task.wait(0.1)
-    				until not AutoShoot.Enabled
-    			end)()
+    				end
+    				task.wait(0.1)
+    			until not AutoShoot.Enabled
     		end
     	end,
         Tooltip = 'Automatically swaps to another projectile source while swinging ur sword'
@@ -15511,8 +15510,8 @@ run(function()
         Function = function(callback)
             if callback then
                 oldvalues = table.clone(tab)
-                oldfont = debug.getconstant(bedwars.DamageIndicator, 86)
-                debug.setconstant(bedwars.DamageIndicator, 86, Enum.Font[FontOption.Value])
+                oldfont = debug.getconstant(bedwars.DamageIndicator, 87)
+                debug.setconstant(bedwars.DamageIndicator, 87, Enum.Font[FontOption.Value])
                 debug.setconstant(bedwars.DamageIndicator, 119, Stroke.Enabled and 'Thickness' or 'Enabled')
                 tab.strokeThickness = Stroke.Enabled and 1 or false
                 tab.textSize = Size.Value
@@ -15525,7 +15524,7 @@ run(function()
                 for i, v in oldvalues do
                     tab[i] = v
                 end
-                debug.setconstant(bedwars.DamageIndicator, 86, oldfont)
+                debug.setconstant(bedwars.DamageIndicator, 87, oldfont)
                 debug.setconstant(bedwars.DamageIndicator, 119, 'Thickness')
             end
         end,
