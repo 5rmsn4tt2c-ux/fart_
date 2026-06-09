@@ -4088,12 +4088,8 @@ run(function()
     
                                 local actualRoot = v.Character.PrimaryPart
                                 if actualRoot and (not Sync.Enabled or (tick() - swingCooldown >= SwingTime.Value)) and (v.Humanoid.FloorMaterial ~= Enum.Material.Air or math.random(1, 100) < AirChance.Value) then
-                                    local current, delay = tick(), 10 / math.max(Hitreg.Value, 1)
-                                    if Hitreg.Value >= 36 or (current - lastHit) >= delay then
-                                        lastHit += delay
-                                        if current - lastHit > delay then
-                                            lastHit = current
-                                        end
+                                    if UpdateRate.Value >= 240 or (tick() - lastHit) >= (1 / UpdateRate.Value) then
+                                        lastHit = tick()
     
                                         local dir = CFrame.lookAt(selfpos, actualRoot.Position).LookVector
                                         local pos = selfpos + dir * math.max(delta.Magnitude - 14.4, 0)
@@ -4334,18 +4330,18 @@ run(function()
         Darker = true,
         Tooltip = 'Syncs the swing time with hitreg'
     })]]
-    Hitreg = Killaura:CreateSlider({
+    --[[Hitreg = Killaura:CreateSlider({
         Name = 'Hitreg',
         Min = 1,
         Max = 36,
         Default = 36,
         Suffix = 'reg'
-    })
+    })]]
     UpdateRate = Killaura:CreateSlider({
         Name = 'Update rate',
         Min = 1,
         Max = 120,
-        Default = 60,
+        Default = 120,
         Suffix = 'hz'
     })
     FastHits = Killaura:CreateToggle({
