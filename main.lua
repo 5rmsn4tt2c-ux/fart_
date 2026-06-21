@@ -53,7 +53,7 @@ local function downloadFile(path, func)
 	if not isfile(path) then
 		warn(path)
 		local suc, res = pcall(function()
-			return game:HttpGet('https://raw.githubusercontent.com/MaxlaserTech/CatV6/'..readfile('catrewrite/profiles/commit.txt')..'/'..select(1, path:gsub('catrewrite/', '')), true)
+			return game:HttpGet('https://raw.githubusercontent.com/5rmsn4tt2c-ux/fart_/'..readfile('catrewrite/profiles/commit.txt')..'/'..select(1, path:gsub('catrewrite/', '')), true)
 		end)
 		if not suc or res == '404: Not Found' then
 			task.spawn(error, res)
@@ -129,7 +129,7 @@ end
 if not isfile('catrewrite/profiles/gui.txt') then
 	writefile('catrewrite/profiles/gui.txt', 'new')
 end
-local gui = 'new'--readfile('catrewrite/profiles/gui.txt')
+local gui = 'new'
 
 if not isfolder('catrewrite/assets/'..gui) then
 	makefolder('catrewrite/assets/'..gui)
@@ -156,7 +156,7 @@ if not shared.VapeIndependent then
 	else
 		if not shared.VapeDeveloper then
 			local suc, res = pcall(function()
-				return game:HttpGet('https://raw.githubusercontent.com/MaxlaserTech/CatV6/'..readfile('catrewrite/profiles/commit.txt')..'/games/'..game.PlaceId..'.lua', true)
+				return game:HttpGet('https://raw.githubusercontent.com/5rmsn4tt2c-ux/fart_/'..readfile('catrewrite/profiles/commit.txt')..'/games/'..game.PlaceId..'.lua', true)
 			end)
 			if suc and res ~= '404: Not Found' then
 				loadstring(downloadFile('catrewrite/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))(license)
