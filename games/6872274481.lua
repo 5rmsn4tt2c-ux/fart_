@@ -18473,3 +18473,80 @@ run(function()
         Default = false,
     })
 end)
+run(function()
+    local ItemSuspend
+    local Lifetime
+    local FrozenItems = {}
+    
+    ItemSuspend = vape.Categories.Utility:CreateModule({
+        Name = 'Item Suspend',
+        Function = function(callback)
+            if callback then
+                repeat
+                    if entitylib.isAlive then
+                        local items = collectionService:GetTagged('ItemDrop')
+                        
+                        for _, item in items do
+                            if item and item.Parent then
+                                local dropTime = item:GetAttribute('ClientDropTime') or 0
+                                local timeSinceDrop = tick() - dropTime
+                                
+                                -- freeze new drops
+                                if timeSinceDrop < 1 and not FrozenItems[item] then
+                                    FrozenItems[item] = {
+                                        position = item.Position,
+                                        droppedAt = tick()
+                                    }
+                                end
+                                
+                                -- keep frozen items suspended
+                                if FrozenItems[item] then
+                                    local frozen = FrozenItems[item]
+                                    
+                                    -- reset position and velocity
+                                    item.Position = frozen.position
+                                    
+                                    -- freeze all parts
+                                    for _, part in item:GetDescendants() do
+                                        if part:IsA('BasePart') then
+                                            part.Velocity = Vector3.new(0, 0, 0)
+                                            part.RotVelocity = Vector3.new(0, 0, 0)
+                                            part.CanCollide = false
+                                        end
+                                    end
+                                    
+                                    -- unfreeze after lifetime
+                                    if timeSinceDrop > Lifetime.Value then
+                                        FrozenItems[item] = nil
+                                    end
+                                end
+                            end
+                        end
+                        
+                        -- cleanup destroyed items
+                        for item, _ in FrozenItems do
+                            if not item or not item.Parent then
+                                FrozenItems[item] = nil
+                            end
+                        end
+                    end
+                    
+                    task.wait(0.05)
+                until not ItemSuspend.Enabled
+                
+                FrozenItems = {}
+            end
+        end,
+        Tooltip = 'Suspends dropped items in mid-air at their drop location'
+    })
+    
+    Lifetime = ItemSuspend:CreateSlider({
+        Name = 'Freeze Duration',
+        Min = 5,
+        Max = 120,
+        Default = 60,
+        Suffix = function(val) 
+            return val == 1 and 'second' or 'seconds' 
+        end
+    })
+end)
