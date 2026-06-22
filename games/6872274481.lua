@@ -18572,7 +18572,6 @@ run(function()
     local FrostedFastHits
     local FireRate
     local Legit
-    local Projectiles
     local lastShot = 0
     
     FrostedFastHits = vape.Categories.Combat:CreateModule({
@@ -18581,40 +18580,21 @@ run(function()
             if callback then
                 Legit.Object.Visible = true
                 FireRate.Object.Visible = true
-                Projectiles.Object.Visible = true
                 
                 repeat
                     if entitylib.isAlive then
                         local equipped = bedwars.Store:getState().Character.equippedItem
                         
                         if equipped and equipped.name == 'frosted_snowball' and tick() > lastShot then
-                            local backpack = entitylib.character:FindFirstChild('Backpack')
-                            if backpack then
-                                for _, item in pairs(backpack:GetChildren()) do
-                                    if item.Name == 'frosted_snowball' then
-                                        -- switch to snowball
-                                        task.spawn(function()
-                                            pcall(function()
-                                                bedwars.Client:Get(remotes.EquipItem):CallServerAsync({hand = item})
-                                            end)
-                                        end)
-                                        
-                                        task.wait(0.08)
-                                        
-                                        -- fire
-                                        task.spawn(function()
-                                            pcall(function()
-                                                bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
-                                                    itemDrop = nil
-                                                })
-                                            end)
-                                        end)
-                                        
-                                        lastShot = tick() + FireRate.Value
-                                        break
-                                    end
-                                end
-                            end
+                            task.spawn(function()
+                                pcall(function()
+                                    bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
+                                        itemDrop = nil
+                                    })
+                                end)
+                            end)
+                            
+                            lastShot = tick() + FireRate.Value
                         end
                     end
                     task.wait(0.01)
@@ -18622,16 +18602,9 @@ run(function()
             else
                 Legit.Object.Visible = false
                 FireRate.Object.Visible = false
-                Projectiles.Object.Visible = false
             end
         end,
         Tooltip = 'Fires snowballs rapidly'
-    })
-    
-    Projectiles = FrostedFastHits:CreateTextList({
-        Name = 'Projectiles',
-        Default = {'frosted_snowball'},
-        Visible = false
     })
     
     Legit = FrostedFastHits:CreateToggle({
@@ -18649,4 +18622,7 @@ run(function()
         Suffix = 'seconds',
         Visible = false
     })
+    
+    print('[FrostedFastHits] Module loaded')
 end)
+																																																																																																										
