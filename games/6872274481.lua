@@ -18582,17 +18582,38 @@ run(function()
                 FireRate.Object.Visible = true
                 
                 repeat
-                    if entitylib.isAlive then
-                        local equipped = bedwars.Store:getState().Character.equippedItem
+                    if entitylib.isAlive and tick() > lastShot then
+                        -- find snowball in backpack
+                        local backpack = entitylib.character:FindFirstChild('Backpack')
+                        local snowballItem = nil
                         
-                        if equipped and equipped.name == 'frosted_snowball' and tick() > lastShot then
-                            task.spawn(function()
-                                pcall(function()
-                                    bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
-                                        itemDrop = nil
-                                    })
-                                end)
-                            end)
+                        if backpack then
+                            for _, item in pairs(backpack:GetChildren()) do
+                                if item.Name == 'frosted_snowball' then
+                                    snowballItem = item
+                                    break
+                                end
+                            end
+                        end
+                        
+                        if snowballItem then
+                            local oldEquipped = bedwars.Store:getState().Character.equippedItem
+                            
+                            -- switch to snowball
+                            bedwars.Client:Get(remotes.EquipItem):SendToServer({hand = snowballItem})
+                            task.wait(0.1)
+                            
+                            -- fire it
+                            bedwars.Client:Get(remotes.FireProjectile):SendToServer({
+                                itemDrop = nil
+                            })
+                            
+                            task.wait(0.05)
+                            
+                            -- switch back
+                            if oldEquipped and oldEquipped.tool then
+                                bedwars.Client:Get(remotes.EquipItem):SendToServer({hand = oldEquipped.tool})
+                            end
                             
                             lastShot = tick() + FireRate.Value
                         end
@@ -18622,7 +18643,4 @@ run(function()
         Suffix = 'seconds',
         Visible = false
     })
-    
-    print('[FrostedFastHits] Module loaded')
 end)
-																																																																																																										
