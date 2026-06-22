@@ -18179,7 +18179,7 @@ run(function()
                                                 local sdir = CFrame.lookAt(localPosition, calc).LookVector
                                                 local id = httpService:GenerateGUID(true)
                                                 local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
-                                                local chargeDur = AutoCharge.Enabled and 5 or (projmeta.drawDurationSeconds or 1)
+                                                local chargeDur = AutoCharge.Enabled and 5 or 0
 
                                                 bedwars.ProjectileController:createLocalProjectile(itemMeta, ammo, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = chargeDur})
                                                 local res = projectileRemote:InvokeServer(
@@ -18241,7 +18241,7 @@ run(function()
                                                 local sdir = CFrame.lookAt(localPosition, calc).LookVector
                                                 local id = httpService:GenerateGUID(true)
                                                 local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
-                                                local chargeDur = AutoCharge.Enabled and 5 or (projmeta.drawDurationSeconds or 1)
+                                                local chargeDur = AutoCharge.Enabled and 5 or 0
 
                                                 bedwars.ProjectileController:createLocalProjectile(itemMeta, ammo, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = chargeDur})
                                                 local res = projectileRemote:InvokeServer(
@@ -18303,7 +18303,7 @@ run(function()
                                                 local sdir = CFrame.lookAt(localPosition, calc).LookVector
                                                 local id = httpService:GenerateGUID(true)
                                                 local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
-                                                local chargeDur = AutoCharge.Enabled and 5 or (projmeta.drawDurationSeconds or 0.85)
+                                                local chargeDur = AutoCharge.Enabled and 5 or 0
 
                                                 bedwars.ProjectileController:createLocalProjectile(itemMeta, projectile, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = chargeDur})
                                                 local res = projectileRemote:InvokeServer(
