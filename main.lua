@@ -117,11 +117,11 @@ shared.vape = vape
 if not shared.VapeIndependent then
 	loadstring(downloadFile('fart/games/universal.lua'), 'universal')()
 	local suc, err = pcall(function()
-		loadstring(downloadFile('fart/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))()
-	end)
-	if not suc then
-		vape:CreateNotification('Fart', 'Game file failed: '..tostring(err), 10, 'warning')
-	end
+    loadstring(downloadFile('fart/games/'..game.PlaceId..'.lua'), tostring(game.PlaceId))()
+end)
+if not suc then
+    vape:CreateNotification('Fart', 'Game file failed: '..tostring(err), 10, 'warning')
+end
 	loadstring(downloadFile('fart/libraries/premium.lua'), 'premium')()
 	finishLoading()
 else
