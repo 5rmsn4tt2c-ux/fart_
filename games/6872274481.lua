@@ -18569,67 +18569,107 @@ run(function()
     })
 end)
 run(function()
-    local DamageImmunity
-    local ImmunityDuration
-    local DebugToggle
+    local FrostedFastHits
+    local FireRate
+    local Legit
+    local Delay
+    local lastShot = 0
+    local lastSwing = 0
     
-    local lastVelocity = 0
-    local immunityEndTime = 0
+    local function hotbarSwitch(slot)
+        if slot then
+            task.spawn(function()
+                bedwars.Client:Get(remotes.EquipItem):SendToServer({tool = slot})
+            end)
+            task.wait(0.1)
+        end
+    end
     
-    DamageImmunity = vape.Categories.Combat:CreateModule({
-        Name = 'Damage Immunity',
+    FrostedFastHits = vape.Categories.Combat:CreateModule({
+        Name = 'Frosted Snowball Fast Hits',
         Function = function(callback)
             if callback then
-                local lplr = game:GetService('Players').LocalPlayer
-                DamageImmunity:Clean(task.spawn(function()
-                    while DamageImmunity.Enabled do
-                        if lplr.Character and lplr.Character:FindFirstChild('HumanoidRootPart') then
-                            local vel = lplr.Character.HumanoidRootPart.Velocity.Magnitude
-                            if vel > 100 and vel > lastVelocity + 50 then
-                                immunityEndTime = tick() + ImmunityDuration.Value
-                                if DebugToggle.Enabled then
-                                    print('[Immunity] Dash detected, immunity active')
-                                end
+                -- detect sword swings
+                pcall(function()
+                    local attackRemote = bedwars.Client:Get(remotes.AttackEntity)
+                    if attackRemote then
+                        FrostedFastHits:Clean(attackRemote.OnClientEvent:Connect(function(...)
+                            if tick() > lastShot + FireRate.Value and entitylib.isAlive then
+                                lastSwing = tick()
                             end
-                            lastVelocity = vel
-                        end
-                        task.wait(0.05)
+                        end))
                     end
-                end))
+                end)
                 
-                if bedwars.ZapNetworking and bedwars.ZapNetworking.EntityDamageEventZap then
-                    DamageImmunity:Clean(bedwars.ZapNetworking.EntityDamageEventZap.On(function(...)
-                        local args = {...}
-                        local damageType = args[7]
-                        local damage = args[2]
-                        
-                        if damageType == 7 then
-                            if tick() < immunityEndTime then
-                                if DebugToggle.Enabled then
-                                    print('[Immunity] BLOCKED fall damage:', damage)
+                repeat
+                    if entitylib.isAlive then
+                        -- fire snowball after sword swing
+                        if tick() < lastSwing + Delay.Value and tick() > lastShot then
+                            local equipped = bedwars.Store:getState().Character.equippedItem
+                            local oldTool = equipped
+                            
+                            -- switch to snowball
+                            if Legit.Enabled then
+                                for _, item in pairs(entitylib.character:FindFirstChild('Backpack'):GetChildren() or {}) do
+                                    if item.Name == 'frosted_snowball' then
+                                        hotbarSwitch(item)
+                                        break
+                                    end
                                 end
-                                return
-                            elseif DebugToggle.Enabled then
-                                print('[Immunity] Fall damage taken (immunity expired):', damage)
+                            else
+                                bedwars.Client:Get(remotes.EquipItem):SendToServer({
+                                    tool = bedwars.Store:getState().Character.equippedItem
+                                })
                             end
+                            
+                            task.wait(0.05)
+                            
+                            -- fire
+                            task.spawn(function()
+                                pcall(function()
+                                    bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
+                                        itemDrop = nil
+                                    })
+                                end)
+                            end)
+                            
+                            -- switch back to sword
+                            if Legit.Enabled and oldTool then
+                                hotbarSwitch(oldTool)
+                            end
+                            
+                            lastShot = tick()
                         end
-                    end))
-                end
+                    end
+                    task.wait(0.01)
+                until not FrostedFastHits.Enabled
             end
         end,
-        Tooltip = 'Grants immunity after dashing (like Elektra)'
+        Tooltip = 'Fires snowballs when you swing sword'
     })
     
-    ImmunityDuration = DamageImmunity:CreateSlider({
-        Name = 'Immunity Duration',
-        Min = 0.5,
-        Max = 5,
-        Default = 2.5,
-        Decimal = 10
+    Legit = FrostedFastHits:CreateToggle({
+        Name = 'Legit Switch',
+        Default = true,
+        Tooltip = 'Adds human-like hotbar switching'
     })
     
-    DebugToggle = DamageImmunity:CreateToggle({
-        Name = 'Debug',
-        Default = true
+    FireRate = FrostedFastHits:CreateSlider({
+        Name = 'Fire Rate',
+        Min = 0.1,
+        Max = 1,
+        Default = 0.3,
+        Decimal = 100,
+        Suffix = 'sec'
+    })
+    
+    Delay = FrostedFastHits:CreateSlider({
+        Name = 'Swing Sync Delay',
+        Min = 0,
+        Max = 0.2,
+        Default = 0.05,
+        Decimal = 100,
+        Suffix = 'sec',
+        Tooltip = 'Delay after swing to fire snowball'
     })
 end)
