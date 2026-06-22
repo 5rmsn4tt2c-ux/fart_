@@ -18574,16 +18574,6 @@ run(function()
     local Legit
     local Projectiles
     local lastShot = 0
-    local swingWindow = 0
-    
-    local function hotbarSwitch(slot)
-        if slot then
-            task.spawn(function()
-                bedwars.Client:Get(remotes.EquipItem):SendToServer({tool = slot})
-            end)
-            task.wait(0.1)
-        end
-    end
     
     FrostedFastHits = vape.Categories.Combat:CreateModule({
         Name = 'Frosted Snowball Fast Hits',
@@ -18593,64 +18583,42 @@ run(function()
                 FireRate.Object.Visible = true
                 Projectiles.Object.Visible = true
                 
-                -- hook sword swing detection
-                pcall(function()
-                    local attackRemote = bedwars.Client:Get(remotes.AttackEntity)
-                    if attackRemote then
-                        FrostedFastHits:Clean(attackRemote.OnClientEvent:Connect(function(...)
-                            swingWindow = tick() + 0.15  -- 150ms window after swing
-                        end))
-                    end
-                end)
-                
                 repeat
-                    if entitylib.isAlive and tick() < swingWindow and tick() > lastShot then
+                    if entitylib.isAlive then
                         local equipped = bedwars.Store:getState().Character.equippedItem
                         
-                        if equipped then
-                            -- check if projectile in whitelist
-                            local inList = false
-                            for _, proj in Projectiles.ListEnabled do
-                                if equipped.name:find(proj) then
-                                    inList = true
-                                    break
-                                end
-                            end
-                            
-                            if inList then
-                                local oldTool = equipped
-                                
-                                -- switch to projectile
-                                if Legit.Enabled then
-                                    for _, item in pairs(entitylib.character:FindFirstChild('Backpack'):GetChildren() or {}) do
-                                        for _, proj in Projectiles.ListEnabled do
-                                            if item.Name:find(proj) then
-                                                hotbarSwitch(item)
-                                                break
-                                            end
+                        if equipped and equipped.name == 'frosted_snowball' and tick() > lastShot then
+                            -- check if we have ammo
+                            local backpack = entitylib.character:FindFirstChild('Backpack')
+                            if backpack then
+                                for _, item in pairs(backpack:GetChildren()) do
+                                    if item.Name == 'frosted_snowball' then
+                                        local oldTool = store.hand.tool
+                                        
+                                        switchItem(item)
+                                        if Legit.Enabled then
+                                            hotbarSwitch(store.inventory.hotbarSlot)
                                         end
+                                        
+                                        task.wait(0.05)
+                                        
+                                        -- fire projectile
+                                        task.spawn(function()
+                                            pcall(function()
+                                                bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
+                                                    itemDrop = nil
+                                                })
+                                            end)
+                                        end)
+                                        
+                                        if oldTool then
+                                            switchItem(oldTool)
+                                        end
+                                        
+                                        lastShot = tick() + FireRate.Value
+                                        break
                                     end
                                 end
-                                
-                                task.wait(0.05)
-                                
-                                -- fire
-                                task.spawn(function()
-                                    pcall(function()
-                                        bedwars.Client:Get(remotes.FireProjectile):CallServerAsync({
-                                            itemDrop = nil
-                                        })
-                                    end)
-                                end)
-                                
-                                -- switch back
-                                if Legit.Enabled and oldTool then
-                                    task.wait(0.05)
-                                    hotbarSwitch(oldTool)
-                                end
-                                
-                                lastShot = tick() + FireRate.Value
-                                swingWindow = 0
                             end
                         end
                     end
@@ -18662,4 +18630,20 @@ run(function()
                 Projectiles.Object.Visible = false
             end
         end,
-        Tooltip = 'Fires
+        Tooltip = 'Fires snowballs rapidly'
+    })
+    
+    Projectiles = FrostedFastHits:CreateTextList({
+        Name = 'Projectiles',
+        Default = {'frosted_snowball'},
+        Visible = false
+    })
+    
+    Legit = FrostedFastHits:CreateToggle({
+        Name = 'Legit Switch',
+        Default = true,
+        Visible = false
+    })
+    
+    FireRate = FrostedFastHits:CreateSlider({
+        Name = 'Fire rate
