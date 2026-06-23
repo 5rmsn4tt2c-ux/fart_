@@ -17925,11 +17925,6 @@ run(function()
     local Whitelist2
     local FireRates2 = {}
     local lastShot2 = tick()
-    local FrostStaffHits
-    local FrostLegit
-    local FrostFireRate
-    local lastFrostShot = tick()
-    local frostFireDelay = 0
     local AutoCharge
     local WhimFastHits
     local lastWhimShot = tick()
@@ -17980,17 +17975,6 @@ run(function()
             end
         end
         return items
-    end
-
-    local function getFrostStaff()
-        for _, item in store.inventory.inventory.items do
-            if item.itemType == 'frost_staff_1' or item.itemType == 'frost_staff_2' or item.itemType == 'frost_staff_3' then
-                local level = item.itemType:match('frost_staff_(%d+)')
-                local projectile = 'frosty_snowball_' .. (level or '1')
-                return item, projectile
-            end
-        end
-        return nil
     end
 
     local function getAttackData()
@@ -18282,68 +18266,6 @@ run(function()
                                     end
                                 end
 
-                                if FrostStaffHits.Enabled and tick() > lastFrostShot and tick() > frostFireDelay and not entitylib.Wallcheck(localPosition, ent.RootPart.Position, {gameCamera, lplr.Character, ent.Character}) then
-                                    local staff, projectile = getFrostStaff()
-                                    if staff then
-                                        local itemMeta = bedwars.ItemMeta[staff.itemType]
-                                        local projmeta = bedwars.ProjectileMeta[projectile]
-                                        if projmeta then
-                                            local projSpeed, gravity = projmeta.launchVelocity, projmeta.gravitationalAcceleration or 196.2
-                                            local oldhotbar, oldtool = store.inventory.hotbarSlot, store.hand.tool
-                                            local hotbar = getHotbar(staff.tool)
-                                            if hotbar then
-                                                switchItem(staff.tool)
-                                                if FrostLegit.Enabled then
-                                                    hotbarSwitch(hotbar)
-                                                end
-                                            end
-
-                                            local calc = prediction.SolveTrajectory(localPosition, projSpeed, gravity, ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, ent.Jumping and 42.6 or nil, nil, nil, lplr:GetNetworkPing())
-                                            if calc then
-                                                local sdir = CFrame.lookAt(localPosition, calc).LookVector
-                                                local id = httpService:GenerateGUID(true)
-                                                local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
-                                                bedwars.ProjectileController:createLocalProjectile(itemMeta, projectile, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = 0})
-                                                local res = projectileRemote:InvokeServer(
-                                                    staff.tool,
-                                                    projectile,
-                                                    projectile,
-                                                    shootPosition,
-                                                    pos,
-                                                    sdir * projSpeed,
-                                                    id,
-                                                    {
-                                                        drawDurationSeconds = 0,
-                                                        shotId = httpService:GenerateGUID(false),
-                                                        chargeRatio = 0
-                                                    },
-                                                    workspace:GetServerTimeNow() - 0.045
-                                                )
-                                                if res then
-                                                    pcall(function()
-                                                        res.Parent = replicatedStorage
-                                                    end)
-                                                    frostFireDelay = tick() + (itemMeta.projectileSource.fireDelaySec or 1)
-                                                    local shoot = itemMeta.projectileSource.launchSound
-                                                    shoot = shoot and shoot[math.random(1, #shoot)] or nil
-                                                    if shoot then
-                                                        bedwars.SoundManager:playSound(shoot)
-                                                    end
-                                                end
-                                                lastFrostShot = tick() + (lplr:GetNetworkPing() + FrostFireRate.Value)
-                                            end
-
-                                            task.spawn(function()
-                                                if FrostLegit.Enabled then
-                                                    hotbarSwitch(oldhotbar)
-                                                end
-                                                if oldtool then
-                                                    switchItem(oldtool)
-                                                end
-                                            end)
-                                        end
-                                    end
-                                end
                             end
                         else
                             lastfound = 0
@@ -18493,32 +18415,187 @@ run(function()
         Visible = false,
         Default = 0.45,
     })
-    FrostStaffHits = ClosestSilentAim:CreateToggle({
-        Name = 'Frost Staff Hits',
-        Default = false,
-        Function = function(callback)
-            pcall(function()
-                FrostLegit.Object.Visible = callback
-                FrostFireRate.Object.Visible = callback
-            end)
+end)
+run(function()
+    local FrostAuto
+    local Targets
+    local Range
+    local FireRate
+    local Sort
+    local Legit
+    local Angle
+    local lastFrostShot = tick()
+    local frostFireDelay = 0
+    local projectileRemote = {InvokeServer = function(self, ...) end}
+
+    task.spawn(function()
+        projectileRemote = bedwars.Client:Get(remotes.FireProjectile).instance
+    end)
+
+    local function getFrostStaff()
+        for _, item in store.inventory.inventory.items do
+            if item.itemType == 'frost_staff_1' or item.itemType == 'frost_staff_2' or item.itemType == 'frost_staff_3' then
+                local level = item.itemType:match('frost_staff_(%d+)')
+                local projectile = 'frosty_snowball_' .. (level or '1')
+                return item, projectile
+            end
         end
+        return nil
+    end
+
+    FrostAuto = vape.Categories.Combat:CreateModule({
+        Name = 'Frost Staff Hits',
+        Function = function(callback)
+            if callback then
+                repeat
+                    task.wait()
+                    if not entitylib.isAlive then continue end
+                    if bedwars.AppController:isLayerOpen(bedwars.UILayers.MAIN) then continue end
+                    if tick() < lastFrostShot or tick() < frostFireDelay then continue end
+
+                    local staff, projectile = getFrostStaff()
+                    if not staff then continue end
+
+                    local localPosition = entitylib.character.RootPart.Position
+                    local ent = entitylib.EntityPosition({
+                        Origin = localPosition,
+                        Range = Range.Value,
+                        Wallcheck = Targets.Walls.Enabled or nil,
+                        Part = 'RootPart',
+                        Players = Targets.Players.Enabled,
+                        NPCs = Targets.NPCs.Enabled,
+                        Limit = 1,
+                        Sort = sortmethods[Sort.Value] or sortmethods.Distance,
+                    })
+
+                    if not ent then continue end
+                    if entitylib.Wallcheck(localPosition, ent.RootPart.Position, {gameCamera, lplr.Character, ent.Character}) then continue end
+
+                    local delta = (ent.RootPart.Position - localPosition)
+                    local flat = delta * Vector3.new(1, 0, 1)
+                    local localfacing = (inputService.KeyboardEnabled and gameCamera or entitylib.character.RootPart).CFrame.LookVector * Vector3.new(1, 0, 1)
+                    local facingdot = flat.Magnitude > 0 and localfacing.Magnitude > 0 and (localfacing / localfacing.Magnitude):Dot(flat / flat.Magnitude) or 0
+                    if facingdot < math.cos(math.rad(Angle.Value) / 2) then continue end
+
+                    local itemMeta = bedwars.ItemMeta[staff.itemType]
+                    local projmeta = bedwars.ProjectileMeta[projectile]
+                    if not projmeta then continue end
+
+                    local projSpeed = projmeta.launchVelocity
+                    local gravity = projmeta.gravitationalAcceleration or 196.2
+                    local oldhotbar = store.inventory.hotbarSlot
+                    local oldtool = store.hand.tool
+                    local hotbar = getHotbar(staff.tool)
+
+                    if hotbar then
+                        switchItem(staff.tool)
+                        if Legit.Enabled then
+                            hotbarSwitch(hotbar)
+                        end
+                    end
+
+                    local pos = localPosition + CFrame.lookAt(localPosition, ent.RootPart.Position).LookVector * math.max(delta.Magnitude - 14.4, 0)
+                    local calc = prediction.SolveTrajectory(
+                        localPosition, projSpeed, gravity,
+                        ent.RootPart.Position, ent.RootPart.Velocity,
+                        workspace.Gravity, ent.HipHeight,
+                        ent.Jumping and 42.6 or nil,
+                        nil, nil, lplr:GetNetworkPing()
+                    )
+
+                    if calc then
+                        local sdir = CFrame.lookAt(localPosition, calc).LookVector
+                        local id = httpService:GenerateGUID(true)
+                        local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(
+                            -bedwars.BowConstantsTable.RelX,
+                            -bedwars.BowConstantsTable.RelY,
+                            -bedwars.BowConstantsTable.RelZ
+                        ))).Position
+
+                        bedwars.ProjectileController:createLocalProjectile(itemMeta, projectile, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = 0})
+                        local res = projectileRemote:InvokeServer(
+                            staff.tool, projectile, projectile,
+                            shootPosition, pos, sdir * projSpeed,
+                            id,
+                            {
+                                drawDurationSeconds = 0,
+                                shotId = httpService:GenerateGUID(false),
+                                chargeRatio = 0,
+                            },
+                            workspace:GetServerTimeNow() - 0.045
+                        )
+                        if res then
+                            pcall(function()
+                                res.Parent = replicatedStorage
+                            end)
+                            frostFireDelay = tick() + (itemMeta.projectileSource.fireDelaySec or 1)
+                            local shoot = itemMeta.projectileSource.launchSound
+                            shoot = shoot and shoot[math.random(1, #shoot)] or nil
+                            if shoot then
+                                bedwars.SoundManager:playSound(shoot)
+                            end
+                        end
+                        lastFrostShot = tick() + (lplr:GetNetworkPing() + FireRate.Value)
+                    end
+
+                    task.spawn(function()
+                        task.wait(0.1)
+                        if oldtool then
+                            switchItem(oldtool)
+                            if Legit.Enabled then
+                                hotbarSwitch(oldhotbar)
+                            end
+                        end
+                    end)
+                until not FrostAuto.Enabled
+            end
+        end,
+        Tooltip = 'Fires frost staff at nearest target',
     })
-    FrostLegit = ClosestSilentAim:CreateToggle({
-        Name = 'Frost Legit Switch',
-        Darker = true,
-        Visible = false,
+
+    Targets = FrostAuto:CreateTargets({Players = true, NPCs = true})
+    local methods = {'Damage', 'Distance'}
+    for i in sortmethods do
+        if not table.find(methods, i) then
+            table.insert(methods, i)
+        end
+    end
+    Sort = FrostAuto:CreateDropdown({
+        Name = 'Target mode',
+        List = methods,
+        Default = 'Distance',
     })
-    FrostFireRate = ClosestSilentAim:CreateSlider({
-        Name = 'Frost fire rate',
+    Range = FrostAuto:CreateSlider({
+        Name = 'Range',
+        Min = 1,
+        Max = 100,
+        Default = 60,
+        Suffix = function(val)
+            return val <= 1 and 'stud' or 'studs'
+        end,
+        Decimal = 5,
+    })
+    Angle = FrostAuto:CreateSlider({
+        Name = 'Max angle',
+        Min = 1,
+        Max = 360,
+        Default = 360,
+    })
+    FireRate = FrostAuto:CreateSlider({
+        Name = 'Fire rate',
         Suffix = 'seconds',
         Min = 0,
         Max = 2,
         Decimal = 100,
-        Darker = true,
-        Visible = false,
         Default = 0.45,
     })
+    Legit = FrostAuto:CreateToggle({
+        Name = 'Legit Switch',
+        Default = false,
+        Tooltip = 'Switches back to original item after each shot',
+    })
 end)
+
 run(function()
     local WhimAuto
     local Targets
