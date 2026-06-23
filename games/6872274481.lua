@@ -8686,6 +8686,24 @@ run(function()
 end)
 
 run(function()
+    local NoFallDamage
+
+    pcall(function()
+        local proto = getproto(bedwars.GroundHit, 1)
+        local orig
+        orig = hookfunction(proto, newcclosure(function(...)
+            if NoFallDamage and NoFallDamage.Enabled then return end
+            return orig(...)
+        end))
+    end)
+
+    NoFallDamage = vape.Categories.Utility:CreateModule({
+        Name = 'No Fall Damage',
+        Tooltip = 'Blocks the fall damage handler before it fires the server remote'
+    })
+end)
+
+run(function()
     local AutoBalloon
     
     AutoBalloon = vape.Categories.Utility:CreateModule({
