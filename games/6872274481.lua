@@ -17963,7 +17963,6 @@ run(function()
     local function getProjectiles()
         local items = {}
         for _, item in store.inventory.inventory.items do
-            if item.itemType == 'wood_bow' then continue end
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
             if ammo and table.find(Whitelist.ListEnabled, ammo) then
@@ -17981,7 +17980,6 @@ run(function()
     local function getProjectiles2()
         local items = {}
         for _, item in store.inventory.inventory.items do
-            if item.itemType == 'wood_bow' then continue end
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
             if ammo and table.find(Whitelist2.ListEnabled, ammo) then
@@ -18167,10 +18165,8 @@ run(function()
                                         local item, ammo, projectile, itemMeta = unpack(projectiles[1])
                                         if tick() > (FireRates[item.itemType] or 0) then
                                             local projmeta = bedwars.ProjectileMeta[projectile]
-                                            local minScalar = itemMeta.projectileSource.minStrengthScalar or 1
+                                            local projSpeed, gravity = projmeta.launchVelocity, projmeta.gravitationalAcceleration or 196.2
                                             local chargeDur = 0
-                                            local projSpeed = projmeta.launchVelocity * minScalar
-                                            local gravity = projmeta.gravitationalAcceleration or 196.2
                                             local oldhotbar, oldtool = store.inventory.hotbarSlot, store.hand.tool
                                             local hotbar = getHotbar(item.tool)
                                             if hotbar then
@@ -18231,10 +18227,8 @@ run(function()
                                         local item, ammo, projectile, itemMeta = unpack(projectiles[1])
                                         if tick() > (FireRates2[item.itemType] or 0) then
                                             local projmeta = bedwars.ProjectileMeta[projectile]
-                                            local minScalar = itemMeta.projectileSource.minStrengthScalar or 1
+                                            local projSpeed, gravity = projmeta.launchVelocity, projmeta.gravitationalAcceleration or 196.2
                                             local chargeDur = 0
-                                            local projSpeed = projmeta.launchVelocity * minScalar
-                                            local gravity = projmeta.gravitationalAcceleration or 196.2
                                             local oldhotbar, oldtool = store.inventory.hotbarSlot, store.hand.tool
                                             local hotbar = getHotbar(item.tool)
                                             if hotbar then
