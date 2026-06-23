@@ -18490,6 +18490,7 @@ run(function()
                     local hotbar = getHotbar(staff.tool)
 
                     if hotbar then
+                        switchItem(staff.tool)
                         hotbarSwitch(hotbar)
                     end
 
@@ -18537,10 +18538,13 @@ run(function()
                         lastFrostShot = tick() + (lplr:GetNetworkPing() + FireRate.Value)
                     end
 
-                    hotbarSwitch(oldhotbar)
-                    if oldtool then
-                        switchItem(oldtool)
-                    end
+                    task.spawn(function()
+                        task.wait(0.1)
+                        if oldtool then
+                            switchItem(oldtool)
+                            hotbarSwitch(oldhotbar)
+                        end
+                    end)
                 until not FrostAuto.Enabled
             end
         end,
