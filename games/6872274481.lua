@@ -8600,37 +8600,69 @@ run(function()
 end)
 
 run(function()
+    local blockUntil = 0
+    local wasFalling = false
+    local rp = RaycastParams.new()
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+
     local function unbindVelTracker()
         pcall(function() runService:UnbindFromRenderStep('VelocityTracking') end)
     end
 
-    local rp = RaycastParams.new()
-    rp.FilterType = Enum.RaycastFilterType.Exclude
+    -- intercept FireServer/InvokeServer at the Instance level:
+    -- catches the underlying remote call that Knit proxy SendToServer makes
+    local oldNamecall
+    pcall(function()
+        oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+            local m = getnamecallmethod()
+            if NoFallDamage and NoFallDamage.Enabled and tick() < blockUntil then
+                if m == "FireServer" or m == "InvokeServer" then return end
+            end
+            return oldNamecall(self, ...)
+        end))
+    end)
 
     NoFallDamage = vape.Categories.Utility:CreateModule({
         Name = 'No Fall Damage',
         Function = function(call)
             if call then
-                -- primary: kill the BedWars velocity tracking step entirely
                 unbindVelTracker()
                 NoFallDamage:Clean(lplr.CharacterAdded:Connect(function()
-                    task.wait(1)
+                    task.wait(0.1)
                     if NoFallDamage.Enabled then unbindVelTracker() end
                 end))
-                -- backup: PostSimulation fires before BindToRenderStep "Last"
-                -- so zeroing velocity here means VelocityTracking reads 0
-                NoFallDamage:Clean(runService.PostSimulation:Connect(function()
+                -- PreSimulation: detect imminent landing and arm the remote block
+                -- StateChanged fires during physics (after PreSimulation), so arming
+                -- here ensures the hook catches the damage remote in the same frame
+                NoFallDamage:Clean(runService.PreSimulation:Connect(function()
                     if not entitylib.isAlive then return end
                     local hrp = entitylib.character and entitylib.character.RootPart
                     if not hrp then return end
-                    local vel = hrp.AssemblyLinearVelocity
-                    if vel.Y >= -10 then return end
-                    rp.FilterDescendantsInstances = {lplr.Character}
-                    local hit = workspace:Raycast(hrp.Position, Vector3.new(0, -6, 0), rp)
-                    if hit then
-                        hrp.AssemblyLinearVelocity = Vector3.new(vel.X, 0, vel.Z)
+                    local hum = entitylib.character.Humanoid
+                    if not hum then return end
+                    local state = hum:GetState()
+                    if state == Enum.HumanoidStateType.FreeFalling then
+                        wasFalling = true
+                        local vel = hrp.AssemblyLinearVelocity
+                        if vel.Y < -10 then
+                            rp.FilterDescendantsInstances = {lplr.Character}
+                            -- lookahead: vel * 0.05s covers ~3 frames at 60fps
+                            local hit = workspace:Raycast(hrp.Position, Vector3.new(0, vel.Y * 0.05 - 1, 0), rp)
+                            if hit then
+                                blockUntil = tick() + 0.05
+                            end
+                        end
+                    elseif wasFalling then
+                        -- just transitioned out of FreeFalling (landed) — arm as fallback
+                        wasFalling = false
+                        if tick() >= blockUntil then
+                            blockUntil = tick() + 0.05
+                        end
                     end
                 end))
+            else
+                wasFalling = false
+                blockUntil = 0
             end
         end,
         Tooltip = 'Prevents fall damage'
