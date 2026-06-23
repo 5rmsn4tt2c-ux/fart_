@@ -18309,12 +18309,17 @@ run(function()
                                                         return nextLaunch(self2, projmeta2, worldmeta2, origin2, shootpos2)
                                                     end
                                                     local meta2 = projmeta2:getProjectileMeta()
+                                                    local velMult = math.max(projmeta2.velocityMultiplier, 0.15)
+                                                    local fireSpeed = projSpeed * velMult
+                                                    local fireCalc = prediction.SolveTrajectory(localPosition, fireSpeed, gravity, ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, ent.Jumping and 42.6 or nil, nil, nil, lplr:GetNetworkPing())
+                                                    local fireDir = fireCalc and CFrame.lookAt(localPosition, fireCalc).LookVector or sdir
                                                     return {
-                                                        initialVelocity = sdir * projSpeed,
+                                                        initialVelocity = fireDir * fireSpeed,
                                                         positionFrom = shootpos2 or origin2,
                                                         deltaT = meta2.lifetimeSec or 3,
                                                         gravitationalAcceleration = gravity,
-                                                        drawDurationSeconds = 0,
+                                                        drawDurationSeconds = projmeta2.drawDurationSeconds,
+                                                        chargeRatio = 0,
                                                     }
                                                 end)
 
@@ -18322,10 +18327,13 @@ run(function()
                                                     mouse1click()
                                                 else
                                                     local id = httpService:GenerateGUID(true)
-                                                    local shootPosition = (CFrame.new(localPosition, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
+                                                    local minSpeed = projSpeed * 0.15
+                                                    local lowCalc = prediction.SolveTrajectory(localPosition, minSpeed, gravity, ent.RootPart.Position, ent.RootPart.Velocity, workspace.Gravity, ent.HipHeight, ent.Jumping and 42.6 or nil, nil, nil, lplr:GetNetworkPing())
+                                                    local lowDir = lowCalc and CFrame.lookAt(localPosition, lowCalc).LookVector or sdir
+                                                    local shootPosition = (CFrame.new(localPosition, lowCalc or calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
                                                     bedwars.Client:Get(remotes.FireProjectile):CallServerAsync(
                                                         staff.tool, projectile, projectile,
-                                                        shootPosition, pos, sdir * projSpeed,
+                                                        shootPosition, pos, lowDir * minSpeed,
                                                         id,
                                                         {
                                                             drawDurationSeconds = 0,
