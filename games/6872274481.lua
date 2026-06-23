@@ -9883,54 +9883,27 @@ run(function()
                 local items = collection('ItemDrop', PickupRange)
                 repeat
                     if entitylib.isAlive then
+                        local localPosition = entitylib.character.RootPart.Position
                         for _, v in items do
-                            if not PickupRange.Enabled then break end
                             if tick() - (v:GetAttribute('ClientDropTime') or 0) < 2 then continue end
-                            local root = entitylib.character.RootPart
-                            local localPos = root.Position
-                            if Lower.Enabled and (localPos.Y - v.Position.Y) < (entitylib.character.HipHeight - 1) then continue end
-                            if entitylib.character.Humanoid.Health <= 0 then break end
-
-                            local itemPos = v.Position
-                            local dist = (localPos - itemPos).Magnitude
-
-                            local function doPickup()
-                                bedwars.Client:Get(remotes.PickupItem):CallServerAsync({
-                                    itemDrop = v
-                                }):andThen(function(suc)
-                                    if suc and bedwars.SoundList then
-                                        bedwars.SoundManager:playSound(bedwars.SoundList.PICKUP_ITEM_DROP)
-                                        local sound = bedwars.ItemMeta[v.Name].pickUpOverlaySound
-                                        if sound then
-                                            bedwars.SoundManager:playSound(sound, {
-                                                position = v.Position,
-                                                volumeMultiplier = 0.9
-                                            })
+                            if Lower.Enabled and (localPosition.Y - v.Position.Y) < (entitylib.character.HipHeight - 1) then continue end
+                            if entitylib.character.Humanoid.Health > 0 then
+                                task.spawn(function()
+                                    bedwars.Client:Get(remotes.PickupItem):CallServerAsync({
+                                        itemDrop = v
+                                    }):andThen(function(suc)
+                                        if suc and bedwars.SoundList then
+                                            bedwars.SoundManager:playSound(bedwars.SoundList.PICKUP_ITEM_DROP)
+                                            local sound = bedwars.ItemMeta[v.Name].pickUpOverlaySound
+                                            if sound then
+                                                bedwars.SoundManager:playSound(sound, {
+                                                    position = v.Position,
+                                                    volumeMultiplier = 0.9
+                                                })
+                                            end
                                         end
-                                    end
+                                    end)
                                 end)
-                            end
-
-                            if dist > 10 then
-                                -- Velocity sprint: moves character as fast physics (not a TP),
-                                -- so server accepts it as speedhack-style movement.
-                                local savedCF = root.CFrame
-                                local deadline = tick() + dist / 100 + 1.5
-                                repeat
-                                    root.AssemblyLinearVelocity = (v.Position - root.Position).Unit * 300
-                                    task.wait(0.05)
-                                until not entitylib.isAlive
-                                    or not PickupRange.Enabled
-                                    or (root.Position - v.Position).Magnitude < 8
-                                    or tick() > deadline
-                                root.AssemblyLinearVelocity = Vector3.zero
-
-                                if entitylib.isAlive and PickupRange.Enabled then
-                                    doPickup()
-                                end
-                                root.CFrame = savedCF
-                            else
-                                task.spawn(doPickup)
                             end
                         end
                     end
