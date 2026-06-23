@@ -18490,10 +18490,7 @@ run(function()
                     local hotbar = getHotbar(staff.tool)
 
                     if hotbar then
-                        switchItem(staff.tool)
-                        if Legit.Enabled then
-                            hotbarSwitch(hotbar)
-                        end
+                        hotbarSwitch(hotbar)
                     end
 
                     local pos = localPosition + CFrame.lookAt(localPosition, ent.RootPart.Position).LookVector * math.max(delta.Magnitude - 14.4, 0)
