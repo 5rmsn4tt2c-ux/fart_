@@ -2997,15 +2997,13 @@ run(function()
         if entitylib.isAlive and entitylib.character.Humanoid.Health > 0 and (not eg_oldroot or not eg_oldroot.Parent) then
             eg_hip = entitylib.character.Humanoid.HipHeight
             eg_oldroot = entitylib.character.HumanoidRootPart
-            if not lplr.Character.Parent then return false end
-            lplr.Character.Parent = replicatedStorage
             eg_clone = eg_oldroot:Clone()
+            eg_clone.Anchored = true
             eg_clone.Parent = lplr.Character
             eg_oldroot.Transparency = 1
             eg_oldroot.Parent = workspace
             store.rootpart = eg_oldroot
             lplr.Character.PrimaryPart = eg_clone
-            lplr.Character.Parent = workspace
             bedwars.QueryUtil:setQueryIgnored(eg_clone, true)
             bedwars.QueryUtil:setQueryIgnored(eg_oldroot, true)
             entitylib.character.Humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
@@ -3017,7 +3015,6 @@ run(function()
 
     local function eg_destroyClone()
         if eg_oldroot and eg_oldroot.Parent and entitylib.isAlive then
-            lplr.Character.Parent = replicatedStorage
             eg_oldroot.AssemblyLinearVelocity = Vector3.zero
             eg_oldroot.Parent = lplr.Character
             if eg_clone then
@@ -3025,7 +3022,6 @@ run(function()
                 eg_clone = nil
             end
             lplr.Character.PrimaryPart = eg_oldroot
-            lplr.Character.Parent = workspace
             eg_oldroot.CanCollide = true
             entitylib.character.Humanoid.HipHeight = eg_hip or 2.6
             eg_oldroot.Transparency = 1
@@ -3045,11 +3041,7 @@ run(function()
                 ElektraGodmode:Clean(runService.PreSimulation:Connect(function()
                     if eg_oldroot and eg_oldroot.Parent then
                         eg_oldroot.AssemblyLinearVelocity = Vector3.zero
-                        eg_oldroot.CFrame = eg_clone.CFrame - Vector3.new(0, 200, 0)
-                        local cv = eg_clone.AssemblyLinearVelocity
-                        if cv.Y < 0 then
-                            eg_clone.AssemblyLinearVelocity = Vector3.new(cv.X, 0, cv.Z)
-                        end
+                        eg_oldroot.CFrame = eg_clone.CFrame - Vector3.new(0, 100, 0)
                     end
                 end))
 
