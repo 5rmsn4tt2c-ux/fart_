@@ -17960,15 +17960,12 @@ run(function()
         return nil
     end
 
-    local FastHitsBlacklist = {'wood_bow'}
-
     local function getProjectiles()
         local items = {}
         for _, item in store.inventory.inventory.items do
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
-            if ammo then print('FastHits item:', item.itemType, 'blacklisted:', table.find(FastHitsBlacklist, item.itemType) ~= nil) end
-            if ammo and not table.find(FastHitsBlacklist, item.itemType) and table.find(Whitelist.ListEnabled, ammo) then
+            if ammo and table.find(Whitelist.ListEnabled, ammo) then
                 table.insert(items, {
                     item,
                     ammo,
@@ -17985,7 +17982,7 @@ run(function()
         for _, item in store.inventory.inventory.items do
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
-            if ammo and not table.find(FastHitsBlacklist, item.itemType) and table.find(Whitelist2.ListEnabled, ammo) then
+            if ammo and table.find(Whitelist2.ListEnabled, ammo) then
                 table.insert(items, {
                     item,
                     ammo,
