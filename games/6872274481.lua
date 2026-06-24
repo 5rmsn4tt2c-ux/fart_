@@ -11975,7 +11975,7 @@ run(function()
                     local getShopItem = bedwars.Shop and bedwars.Shop.getShopItem
                     if getShopItem then
                         local team = lplr:GetAttribute('Team')
-                        local woolType = team and ('wool_' .. string.lower(tostring(team)))
+                        local woolType = team and (string.lower(tostring(team)) .. '_wool')
                         local v = woolType and getShopItem(woolType, lplr)
                         print('ABB team:', team, 'woolType:', woolType, 'item:', v ~= nil)
                         if v then
