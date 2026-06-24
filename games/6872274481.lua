@@ -11984,9 +11984,11 @@ run(function()
                                 v = {currency = 'iron', itemType = woolType, amount = 16, price = 8}
                             end
                             local currencytable = {}
+                            local purchaseRemote = bedwars.Client and bedwars.Client:Get('BedwarsPurchaseItem')
+                            if not purchaseRemote then task.wait(1) continue end
                             for _ = 1, SetsSlider.Value do
                                 if not canBuy(v, currencytable) then break end
-                                bedwars.Client:Get('BedwarsPurchaseItem'):CallServerAsync({
+                                purchaseRemote:CallServerAsync({
                                     shopItem = v,
                                     shopId = shopId
                                 })
