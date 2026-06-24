@@ -11960,9 +11960,14 @@ run(function()
         Tooltip = 'Buys wool blocks from the shop when toggled on',
         Function = function(callback)
             if callback then
-                local _, items, _, newid = getShopNPC()
-                if newid then id = newid end
-                if items and id then
+                local shopId = nil
+                for _, v in store.shop or {} do
+                    if v.Shop and v.Id then
+                        shopId = v.Id
+                        break
+                    end
+                end
+                if shopId then
                     local getTeamWool = bedwars.Shop and bedwars.Shop.getTeamWool
                     local getShopItem = bedwars.Shop and bedwars.Shop.getShopItem
                     if getTeamWool and getShopItem then
@@ -11972,7 +11977,11 @@ run(function()
                             local currencytable = {}
                             for _ = 1, BlockSets.Value do
                                 if not canBuy(v, currencytable) then break end
-                                buyItem(v, currencytable)
+                                bedwars.Client:Get('BedwarsPurchaseItem'):CallServerAsync({
+                                    shopItem = v,
+                                    shopId = shopId
+                                })
+                                currencytable[v.currency] -= v.price
                             end
                         end
                     end
