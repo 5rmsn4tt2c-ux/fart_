@@ -11962,9 +11962,11 @@ run(function()
                 repeat
                     local _, items, _, newid = getShopNPC()
                     id = newid or id
-                    if items and store.matchState ~= 2 and store.shopLoaded and bedwars.Shop.getTeamWool then
-                        local woolType = bedwars.Shop.getTeamWool(lplr:GetAttribute('Team'))
-                        local v = bedwars.Shop.getShopItem and bedwars.Shop.getShopItem(woolType, lplr)
+                    local getTeamWool = bedwars.Shop and bedwars.Shop.getTeamWool
+                    local getShopItem = bedwars.Shop and bedwars.Shop.getShopItem
+                    if items and store.matchState ~= 2 and store.shopLoaded and getTeamWool and getShopItem then
+                        local woolType = getTeamWool(lplr:GetAttribute('Team'))
+                        local v = woolType and getShopItem(woolType, lplr)
                         if v then
                             local currencytable = {}
                             local item = getItem(woolType)
