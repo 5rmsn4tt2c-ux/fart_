@@ -9057,9 +9057,11 @@ run(function()
     			repeat
     				if last > os.clock() and charge >= Percentage.Value then
     					local wl = Whitelist and Whitelist.ListEnabled
+    					print('[AR] proj='..tostring(lastProj)..' wl='..tostring(wl and #wl or 'nil'))
     					if wl and #wl > 0 and table.find(wl, lastProj) then
     						task.wait(Delay.Value)
     						mouse1click()
+    						print('[AR] clicked')
     						task.wait(0.2)
     					end
     				end
