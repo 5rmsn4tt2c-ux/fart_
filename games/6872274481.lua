@@ -11819,6 +11819,28 @@ run(function()
         end,
         Tooltip = 'Automatically buys items when you go near the shop'
     })
+    AutoBuy:CreateToggle({
+        Name = 'Buy Wool',
+        Tooltip = 'Automatically buys wool blocks',
+        Function = function(callback)
+            npctick = tick()
+            Functions[99] = callback and function(currencytable, shop)
+                if not shop then return end
+                local woolType = bedwars.Shop.getTeamWool(lplr:GetAttribute('Team'))
+                local v = bedwars.Shop.getShopItem(woolType, lplr)
+                if v then
+                    local item = getItem(woolType)
+                    local needed = (item and math.max(0, 64 - item.amount) or 64) // v.amount
+                    if needed > 0 and canBuy(v, currencytable, needed) then
+                        for _ = 1, needed do
+                            buyItem(v, currencytable)
+                        end
+                        return true
+                    end
+                end
+            end or nil
+        end
+    })
     Sword = AutoBuy:CreateToggle({
         Name = 'Buy Sword',
         Function = function(callback)
@@ -11906,28 +11928,6 @@ run(function()
         }))
         count += 1
     end
-    AutoBuy:CreateToggle({
-        Name = 'Buy Wool',
-        Tooltip = 'Automatically buys wool blocks',
-        Function = function(callback)
-            npctick = tick()
-            Functions[99] = callback and function(currencytable, shop)
-                if not shop then return end
-                local woolType = bedwars.Shop.getTeamWool(lplr:GetAttribute('Team'))
-                local v = bedwars.Shop.getShopItem(woolType, lplr)
-                if v then
-                    local item = getItem(woolType)
-                    local needed = (item and math.max(0, 64 - item.amount) or 64) // v.amount
-                    if needed > 0 and canBuy(v, currencytable, needed) then
-                        for _ = 1, needed do
-                            buyItem(v, currencytable)
-                        end
-                        return true
-                    end
-                end
-            end or nil
-        end
-    })
     TierCheck = AutoBuy:CreateToggle({Name = 'Tier Check'})
     BedwarsCheck = AutoBuy:CreateToggle({
         Name = 'Only Bedwars',
