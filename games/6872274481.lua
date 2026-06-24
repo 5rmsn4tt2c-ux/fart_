@@ -9033,6 +9033,7 @@ run(function()
     local AutoRelease
     local Percentage
     local Delay
+    local WhitelistItems = {}
     
     local launchHook, last = nil, 0
     local charge = 0
@@ -9042,12 +9043,16 @@ run(function()
     	Function = function(call)
     		if call then
     			launchHook = bedwars.ProjectileLaunchHook:Add('AutoRelease', 20, function(nextLaunch, ...)
+    				local projName = select(1, ...)
     				local projmeta = select(2, ...)
+    				if #WhitelistItems > 0 and not table.find(WhitelistItems, projName) then
+    					return nextLaunch(...)
+    				end
     				if projmeta and typeof(projmeta) == 'table' then
     					charge = (projmeta.velocityMultiplier / 1) * 100
     					last = os.clock() + 0.1
     				end
-    
+
     				return nextLaunch(...)
     			end)
     
@@ -9085,6 +9090,13 @@ run(function()
     	Suffix = function(val)
     		return val <= 1 and 'sec' or 'secs'
     	end,
+    })
+    AutoRelease:CreateTextList({
+        Name = 'Whitelist',
+        Placeholder = 'projectile name',
+        Function = function(list)
+            WhitelistItems = list
+        end
     })
 end)
 
