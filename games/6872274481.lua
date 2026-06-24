@@ -5274,6 +5274,10 @@ run(function()
     			return ent.Head.Position
     		end
     		return ent.PrimaryPart.Position
+    	elseif TargetPart.Value == 'Head' then
+    		return ent.Head and ent.Head.Position or ent.PrimaryPart.Position
+    	elseif TargetPart.Value == 'RootPart' then
+    		return ent.PrimaryPart.Position
     	end
     	return
     end
