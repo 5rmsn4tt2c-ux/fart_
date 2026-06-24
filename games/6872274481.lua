@@ -11672,7 +11672,7 @@ run(function()
         local shop, items, upgrades, newid = nil, false, false, nil
         if entitylib.isAlive then
             local localPosition = entitylib.character.RootPart.Position
-            for _, v in store.shop do
+            for _, v in store.shop or {} do
                 if (v.RootPart.Position - localPosition).Magnitude <= 20 then
                     shop = v.Upgrades or v.Shop or nil
                     upgrades = upgrades or v.Upgrades
