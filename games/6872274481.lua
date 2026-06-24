@@ -1061,15 +1061,6 @@ run(function()
 							attackTable.validate.selfPosition.value += CFrame.lookAt(selfpos, targetpos).LookVector * math.max((selfpos - targetpos).Magnitude - 14.399, 0)
 						end
 
-						if HeadHit and HeadHit.Enabled then
-							local head = attackTable.entityInstance and attackTable.entityInstance:FindFirstChild('Head')
-							if head then
-								attackTable.validate.raycast = attackTable.validate.raycast or {}
-								attackTable.validate.raycast.cameraPosition = {value = selfpos}
-								attackTable.validate.raycast.cursorDirection = {value = (head.Position - selfpos).Unit}
-							end
-						end
-
 						if suc and plr then
 							if not select(2, whitelist:get(plr)) then return end
 						end
@@ -3796,9 +3787,49 @@ run(function()
 end)
 
 run(function()
+    local launchHook
+
     HeadHit = vape.Categories.Blatant:CreateModule({
         Name = 'Head Hit',
-        Tooltip = 'Redirects the attack raycast to the enemy Head so all hits register as head hits'
+        Function = function(callback)
+            if callback then
+                launchHook = bedwars.ProjectileLaunchHook:Add('HeadHit', 50, function(nextLaunch, ...)
+                    local self, projmeta, worldmeta, origin, shootpos = ...
+                    if not entitylib.isAlive then return nextLaunch(...) end
+                    local plr = entitylib.EntityMouse({
+                        Part = 'RootPart',
+                        Range = 300,
+                        Players = true,
+                        NPCs = true,
+                        Wallcheck = false,
+                        Origin = shootpos or entitylib.character.RootPart.Position,
+                    })
+                    if not plr or not plr.Head then return nextLaunch(...) end
+                    local pos = shootpos or self:getLaunchPosition(origin)
+                    if not pos then return nextLaunch(...) end
+                    local meta = projmeta:getProjectileMeta()
+                    local gravity = (meta.gravitationalAcceleration or 196.2) * projmeta.gravityMultiplier
+                    local projSpeed = meta.launchVelocity or 100
+                    local offsetpos = pos + projmeta.fromPositionOffset
+                    local targetpos = plr.Head.Position
+                    local newlook = CFrame.new(offsetpos, targetpos)
+                    local calc = prediction.SolveTrajectory(newlook.p, projSpeed * projmeta.velocityMultiplier, gravity, targetpos, plr.RootPart.Velocity, workspace.Gravity, plr.HipHeight, plr.Jumping and 42.6 or nil, nil)
+                    if calc then
+                        return {
+                            initialVelocity = CFrame.new(newlook.Position, calc).LookVector * (projSpeed * projmeta.velocityMultiplier),
+                            positionFrom = offsetpos,
+                            deltaT = meta.lifetimeSec or 3,
+                            gravitationalAcceleration = gravity,
+                            drawDurationSeconds = projmeta.drawDurationSeconds,
+                        }
+                    end
+                    return nextLaunch(...)
+                end)
+            else
+                if launchHook then launchHook(); launchHook = nil end
+            end
+        end,
+        Tooltip = 'Aims all projectiles at the enemy Head so they register as head hits'
     })
 end)
 
