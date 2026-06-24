@@ -11621,6 +11621,7 @@ end)
 
 run(function()
     local AutoBuy
+    local AutoBuyBlock
     local Sword
     local Armor
     local Upgrades
@@ -11952,41 +11953,24 @@ run(function()
             end
         end
     })
-end)
-
-run(function()
-    local AutoBuyBlock = vape.Categories.Inventory:CreateModule({
+    AutoBuyBlock = vape.Categories.Inventory:CreateModule({
         Name = 'Auto Buy Block',
         Tooltip = 'Automatically buys wool blocks from the shop',
-        Function = function(Module)
-            if Module.Enabled then
+        Function = function(callback)
+            if callback then
                 repeat
-                    local shopId = nil
-                    if entitylib.isAlive then
-                        local localPos = entitylib.character.RootPart.Position
-                        for _, v in store.shop do
-                            if v.Shop and (v.RootPart.Position - localPos).Magnitude <= 20 then
-                                shopId = v.Id
-                                break
-                            end
-                        end
-                    end
-                    if shopId and store.matchState ~= 2 and store.shopLoaded then
+                    local _, items, _, newid = getShopNPC()
+                    id = newid or id
+                    if items and store.matchState ~= 2 and store.shopLoaded then
                         local woolType = bedwars.Shop.getTeamWool(lplr:GetAttribute('Team'))
                         local v = bedwars.Shop.getShopItem(woolType, lplr)
                         if v then
+                            local currencytable = {}
                             local item = getItem(woolType)
-                            local currency = getItem(v.currency)
-                            local currencyAmount = currency and currency.amount or 0
                             local needed = (item and math.max(0, 64 - item.amount) or 64) // v.amount
-                            if needed > 0 and currencyAmount >= v.price then
+                            if needed > 0 and canBuy(v, currencytable, needed) then
                                 for _ = 1, needed do
-                                    if currencyAmount < v.price then break end
-                                    bedwars.Client:Get('BedwarsPurchaseItem'):CallServerAsync({
-                                        shopItem = v,
-                                        shopId = shopId
-                                    })
-                                    currencyAmount -= v.price
+                                    buyItem(v, currencytable)
                                 end
                             end
                         end
