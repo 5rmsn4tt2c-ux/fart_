@@ -13952,6 +13952,101 @@ run(function()
         return result
     end
 
+    local function runBedScanner(beds)
+        local function clearAll()
+            for _, d in scannerAdornments do
+                if d.billboard and d.billboard.Parent then d.billboard:Destroy() end
+                if d.box and d.box.Parent then d.box:Destroy() end
+            end
+            table.clear(scannerAdornments)
+            table.clear(scannerLastState)
+        end
+
+        while BedBreaking.Enabled do
+            if not BedScanner or not BedScanner.Enabled then
+                if next(scannerAdornments) then clearAll() end
+                task.wait(0.5)
+                continue
+            end
+
+            local seenIds = {}
+            for _, bed in beds do
+                if not bed or not bed.Parent then continue end
+                local myTeam = lplr.Character and (lplr.Character:GetAttribute('Team') or lplr.Character:GetAttribute('TeamId'))
+                if myTeam and tonumber(bed:GetAttribute('TeamId')) == tonumber(myTeam) then continue end
+
+                local id = tostring(bed)
+                seenIds[id] = true
+
+                local vulnerable = isBedVulnerable(bed)
+                local prev = scannerLastState[id]
+
+                if not scannerAdornments[id] then
+                    local billboard = Instance.new('BillboardGui')
+                    billboard.Size = UDim2.new(0, 130, 0, 36)
+                    billboard.StudsOffset = Vector3.new(0, 6, 0)
+                    billboard.AlwaysOnTop = true
+                    billboard.Adornee = bed
+                    billboard.Parent = gameCamera
+
+                    local label = Instance.new('TextLabel')
+                    label.Size = UDim2.new(1, 0, 1, 0)
+                    label.BackgroundTransparency = 1
+                    label.TextScaled = true
+                    label.Font = Enum.Font.GothamBold
+                    label.TextStrokeTransparency = 0.4
+                    label.TextStrokeColor3 = Color3.new(0, 0, 0)
+                    label.Parent = billboard
+
+                    local box = Instance.new('SelectionBox')
+                    box.SurfaceTransparency = 0.7
+                    box.SurfaceColor3 = Color3.new(0, 0, 0)
+                    box.LineThickness = 0.05
+                    box.Adornee = bed
+                    box.Parent = gameCamera
+
+                    scannerAdornments[id] = {billboard = billboard, label = label, box = box}
+                end
+
+                local d = scannerAdornments[id]
+                if vulnerable then
+                    d.label.Text = '✓ EXPOSED'
+                    d.label.TextColor3 = Color3.fromRGB(0, 230, 80)
+                    d.box.Color3 = Color3.fromRGB(0, 230, 80)
+                else
+                    d.label.Text = '✗ PROTECTED'
+                    d.label.TextColor3 = Color3.fromRGB(255, 60, 60)
+                    d.box.Color3 = Color3.fromRGB(255, 60, 60)
+                end
+
+                if prev ~= nil and prev ~= vulnerable then
+                    if vulnerable then
+                        notif('Bed Scanner', 'Good to go! Bed is exposed', 5, 'info')
+                    else
+                        notif('Bed Scanner', "Don't go for bed — it's now protected", 5, 'warning')
+                    end
+                end
+                scannerLastState[id] = vulnerable
+            end
+
+            local toRemove = {}
+            for id in scannerAdornments do
+                if not seenIds[id] then table.insert(toRemove, id) end
+            end
+            for _, id in toRemove do
+                local d = scannerAdornments[id]
+                if d.billboard and d.billboard.Parent then d.billboard:Destroy() end
+                if d.box and d.box.Parent then d.box:Destroy() end
+                scannerAdornments[id] = nil
+                scannerLastState[id] = nil
+            end
+
+            task.wait(2.5)
+        end
+
+        clearAll()
+    end
+
     BedBreaking = vape.Categories.Minigames:CreateModule({
         Name = 'Bed Breaking',
         Function = function(callback)
@@ -14060,6 +14155,8 @@ run(function()
                 for _, obj in workspace:GetDescendants() do trackAdd(obj) end
                 BedBreaking:Clean(workspace.DescendantAdded:Connect(trackAdd))
                 BedBreaking:Clean(workspace.DescendantRemoving:Connect(trackRemove))
+
+                BedBreaking:Clean(task.spawn(function() runBedScanner(beds) end))
 
                 repeat
                     task.wait(1 / UpdateRate.Value)
@@ -14222,6 +14319,12 @@ run(function()
                     v:Destroy()
                 end
                 table.clear(parts)
+                for _, d in scannerAdornments do
+                    if d.billboard and d.billboard.Parent then d.billboard:Destroy() end
+                    if d.box and d.box.Parent then d.box:Destroy() end
+                end
+                table.clear(scannerAdornments)
+                table.clear(scannerLastState)
             end
         end,
         Tooltip = 'Advanced bed breaker with layer break, yeti breaker, block highlight and more'
@@ -14393,6 +14496,11 @@ run(function()
         Darker = true,
         Visible = false,
         Tooltip = 'Skip beds with solid defenses — only target beds with a detectable opening or fake cover'
+    })
+    BedScanner = BedBreaking:CreateToggle({
+        Name = 'Bed Scanner',
+        Default = false,
+        Tooltip = 'Labels each enemy bed: green ✓ EXPOSED or red ✗ PROTECTED. Notifies you when a bed\'s status changes.'
     })
 
     task.defer(function()
