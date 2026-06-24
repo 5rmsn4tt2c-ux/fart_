@@ -11972,13 +11972,12 @@ run(function()
                 end
                 print('ABB shopCount:', shopCount, 'shopId:', shopId)
                 if shopId then
-                    local getTeamWool = bedwars.Shop and bedwars.Shop.getTeamWool
                     local getShopItem = bedwars.Shop and bedwars.Shop.getShopItem
-                    print('ABB getTeamWool:', getTeamWool ~= nil, 'getShopItem:', getShopItem ~= nil)
-                    if getTeamWool and getShopItem then
-                        local woolType = getTeamWool(lplr:GetAttribute('Team'))
+                    if getShopItem then
+                        local team = lplr:GetAttribute('Team')
+                        local woolType = team and ('wool_' .. string.lower(tostring(team)))
                         local v = woolType and getShopItem(woolType, lplr)
-                        print('ABB woolType:', woolType, 'item:', v ~= nil)
+                        print('ABB team:', team, 'woolType:', woolType, 'item:', v ~= nil)
                         if v then
                             local currencytable = {}
                             for _ = 1, BlockSets.Value do
