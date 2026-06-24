@@ -13956,34 +13956,26 @@ run(function()
     end
 
     local function runBedScanner(beds)
-        local function isExposed(bed)
+        local function isSafe(bed)
             local bedPos = roundPos(bed.Position)
-            local nearbyBlocks = 0
+            local shell1, shell2 = 0, 0
             for _, v in store.blocks do
-                if v and v.Parent and v ~= bed then
-                    if (v.Position - bedPos).Magnitude <= 12 then nearbyBlocks += 1 end
+                if not v or not v.Parent or v == bed then continue end
+                local dist = (v.Position - bedPos).Magnitude
+                if dist <= 4.5 then
+                    shell1 += 1
+                elseif dist <= 9 then
+                    shell2 += 1
                 end
             end
-            if nearbyBlocks < 4 then return true end
-            local visited = {}
-            local queue = {bedPos}
-            visited[bedPos.X..'_'..bedPos.Y..'_'..bedPos.Z] = true
-            local qi = 1
-            while qi <= #queue and qi <= 2000 do
-                local pos = queue[qi]; qi += 1
-                for _, side in sides do
-                    local next = pos + side
-                    local dist = (next - bedPos).Magnitude
-                    if dist > 15 then continue end
-                    local key = next.X..'_'..next.Y..'_'..next.Z
-                    if visited[key] then continue end
-                    visited[key] = true
-                    if dist > 12 then return true end
-                    local block = getPlacedBlock(next)
-                    if not block or block == bed then table.insert(queue, next) end
-                end
+            if shell1 == 0 and shell2 == 0 then return true end  -- no defense
+            if shell2 > 0 then return false end                   -- multi-layer or dome
+            if shell1 > 26 then return false end                  -- too many blocks
+            local faceCount = 0
+            for _, side in sides do
+                if getPlacedBlock(bedPos + side) then faceCount += 1 end
             end
-            return false
+            return faceCount >= 5  -- all cardinal faces covered (allow 1 gap for floor)
         end
 
         local function clearAll()
@@ -14011,7 +14003,7 @@ run(function()
                 local id = tostring(bed)
                 seenIds[id] = true
 
-                local vulnerable = isExposed(bed)
+                local safeToGo = isSafe(bed)
                 local prev = scannerLastState[id]
 
                 if not scannerAdornments[id] then
@@ -14042,24 +14034,24 @@ run(function()
                 end
 
                 local d = scannerAdornments[id]
-                if vulnerable then
-                    d.label.Text = '✓ EXPOSED'
+                if safeToGo then
+                    d.label.Text = '✓ GOOD TO GO'
                     d.label.TextColor3 = Color3.fromRGB(0, 230, 80)
                     d.box.Color3 = Color3.fromRGB(0, 230, 80)
                 else
-                    d.label.Text = '✗ PROTECTED'
+                    d.label.Text = "✗ DON'T GO"
                     d.label.TextColor3 = Color3.fromRGB(255, 60, 60)
                     d.box.Color3 = Color3.fromRGB(255, 60, 60)
                 end
 
-                if prev == nil or prev ~= vulnerable then
-                    if vulnerable then
-                        notif('Bed Scanner', 'Good to go! Bed is exposed', 5, 'info')
+                if prev == nil or prev ~= safeToGo then
+                    if safeToGo then
+                        notif('Bed Scanner', 'Good to go!', 5, 'info')
                     else
-                        notif('Bed Scanner', "Don't go for bed — it's protected", 5, 'warning')
+                        notif('Bed Scanner', "Don't go for bed", 5, 'warning')
                     end
                 end
-                scannerLastState[id] = vulnerable
+                scannerLastState[id] = safeToGo
             end
 
             local toRemove = {}
