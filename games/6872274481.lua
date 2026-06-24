@@ -9045,6 +9045,7 @@ run(function()
     			launchHook = bedwars.ProjectileLaunchHook:Add('AutoRelease', 20, function(nextLaunch, ...)
     				local projName = select(1, ...)
     				local projmeta = select(2, ...)
+    				print('AutoRelease proj:', projName, type(projName))
     				if #WhitelistItems > 0 and not table.find(WhitelistItems, projName) then
     					return nextLaunch(...)
     				end
