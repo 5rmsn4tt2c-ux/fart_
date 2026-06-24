@@ -11622,6 +11622,7 @@ end)
 run(function()
     local AutoBuy
     local AutoBuyBlock
+    local BlockSets
     local Sword
     local Armor
     local Upgrades
@@ -11956,31 +11957,37 @@ run(function()
     })
     AutoBuyBlock = vape.Categories.Inventory:CreateModule({
         Name = 'Auto Buy Block',
-        Tooltip = 'Automatically buys wool blocks from the shop',
+        Tooltip = 'Buys wool blocks from the shop when toggled on',
         Function = function(callback)
             if callback then
-                repeat
-                    local _, items, _, newid = getShopNPC()
-                    id = newid or id
+                local _, items, _, newid = getShopNPC()
+                if newid then id = newid end
+                if items and id then
                     local getTeamWool = bedwars.Shop and bedwars.Shop.getTeamWool
                     local getShopItem = bedwars.Shop and bedwars.Shop.getShopItem
-                    if items and store.matchState ~= 2 and store.shopLoaded and getTeamWool and getShopItem then
+                    if getTeamWool and getShopItem then
                         local woolType = getTeamWool(lplr:GetAttribute('Team'))
                         local v = woolType and getShopItem(woolType, lplr)
                         if v then
                             local currencytable = {}
-                            local item = getItem(woolType)
-                            local needed = (item and math.max(0, 64 - item.amount) or 64) // v.amount
-                            if needed > 0 and canBuy(v, currencytable, needed) then
-                                for _ = 1, needed do
-                                    buyItem(v, currencytable)
-                                end
+                            for _ = 1, BlockSets.Value do
+                                if not canBuy(v, currencytable) then break end
+                                buyItem(v, currencytable)
                             end
                         end
                     end
-                    task.wait(0.5)
-                until not AutoBuyBlock.Enabled
+                end
+                AutoBuyBlock:Toggle()
             end
+        end
+    })
+    BlockSets = AutoBuyBlock:CreateSlider({
+        Name = 'Sets',
+        Min = 1,
+        Max = 8,
+        Default = 4,
+        Suffix = function(val)
+            return 'x16'
         end
     })
 end)
