@@ -3790,7 +3790,7 @@ run(function()
     local objects = {}
 
     local function createHeadHitbox(ent)
-        if ent.Targetable and ent.Player then
+        if ent.Targetable then
             local head = ent.Character:FindFirstChild('Head')
             if not head then return end
             local hitbox = Instance.new('Part')
