@@ -3797,42 +3797,46 @@ run(function()
                 rayCheck.FilterDescendantsInstances = lplr.Character and {lplr.Character} or {}
                 rayCheck.FilterType = Enum.RaycastFilterType.Exclude
                 launchHook = bedwars.ProjectileLaunchHook:Add('HeadHit', 50, function(nextLaunch, ...)
-                    local self, projmeta, worldmeta, origin, shootpos = ...
-                    if not entitylib.isAlive or not projmeta then return nextLaunch(...) end
+                    local ok, result = pcall(function()
+                        local _, projmeta, worldmeta, origin, shootpos = ...
+                        if not entitylib.isAlive or not projmeta or not projmeta.getProjectileMeta then return end
 
-                    local selfpos = entitylib.character.RootPart.Position
-                    local pos = shootpos or (self and self.getLaunchPosition and self:getLaunchPosition(origin)) or selfpos
-                    local offsetpos = pos + (projmeta.projectile ~= 'owl_projectile' and (projmeta.fromPositionOffset or Vector3.zero) or Vector3.zero)
+                        local selfpos = entitylib.character.RootPart.Position
+                        local offsetpos = (shootpos or selfpos) + (projmeta.projectile ~= 'owl_projectile' and (projmeta.fromPositionOffset or Vector3.zero) or Vector3.zero)
 
-                    local ent = entitylib.EntityMouse({
-                        Origin = selfpos,
-                        Range = 180,
-                        Part = 'RootPart',
-                        Players = true,
-                        NPCs = true,
-                        Wallcheck = false,
-                    })
+                        local ent = entitylib.EntityMouse({
+                            Origin = selfpos,
+                            Range = 180,
+                            Part = 'RootPart',
+                            Players = true,
+                            NPCs = true,
+                            Wallcheck = false,
+                        })
 
-                    if not ent then return nextLaunch(...) end
+                        if not ent or not ent.Head then return end
 
-                    local meta = projmeta:getProjectileMeta()
-                    local gravity = (meta.gravitationalAcceleration or 196.2) * projmeta.gravityMultiplier
-                    local projSpeed = meta.launchVelocity or 100
-                    local headpos = ent.Head.Position
+                        local meta = projmeta:getProjectileMeta()
+                        if not meta then return end
 
-                    local calc = prediction.SolveTrajectory(
-                        offsetpos, projSpeed, gravity,
-                        headpos, ent.RootPart.Velocity,
-                        workspace.Gravity, 0, nil, rayCheck
-                    )
+                        local gravity = (meta.gravitationalAcceleration or 196.2) * projmeta.gravityMultiplier
+                        local projSpeed = meta.launchVelocity or 100
 
-                    if not calc then return nextLaunch(...) end
+                        local calc = prediction.SolveTrajectory(
+                            offsetpos, projSpeed, gravity,
+                            ent.Head.Position, ent.RootPart.Velocity,
+                            workspace.Gravity, 0, nil, rayCheck
+                        )
 
-                    return {
-                        initialVelocity = CFrame.new(offsetpos, calc).LookVector * (projSpeed * (projmeta.velocityMultiplier or 1)),
-                        positionFrom = offsetpos,
-                        deltaT = meta.lifetimeSec or 3,
-                    }
+                        if not calc then return end
+
+                        return {
+                            initialVelocity = CFrame.new(offsetpos, calc).LookVector * (projSpeed * (projmeta.velocityMultiplier or 1)),
+                            positionFrom = offsetpos,
+                            deltaT = meta.lifetimeSec or 3,
+                        }
+                    end)
+
+                    return (ok and result) or nextLaunch(...)
                 end)
             else
                 if launchHook then
