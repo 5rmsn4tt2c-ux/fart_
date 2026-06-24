@@ -11906,6 +11906,28 @@ run(function()
         }))
         count += 1
     end
+    AutoBuy:CreateToggle({
+        Name = 'Buy Wool',
+        Tooltip = 'Automatically buys wool blocks',
+        Function = function(callback)
+            npctick = tick()
+            Functions[99] = callback and function(currencytable, shop)
+                if not shop then return end
+                local woolType = bedwars.Shop.getTeamWool(lplr:GetAttribute('Team'))
+                local v = bedwars.Shop.getShopItem(woolType, lplr)
+                if v then
+                    local item = getItem(woolType)
+                    local needed = (item and math.max(0, 64 - item.amount) or 64) // v.amount
+                    if needed > 0 and canBuy(v, currencytable, needed) then
+                        for _ = 1, needed do
+                            buyItem(v, currencytable)
+                        end
+                        return true
+                    end
+                end
+            end or nil
+        end
+    })
     TierCheck = AutoBuy:CreateToggle({Name = 'Tier Check'})
     BedwarsCheck = AutoBuy:CreateToggle({
         Name = 'Only Bedwars',
@@ -12715,50 +12737,6 @@ run(function()
         Active = false
     end
     
-    local AutoBuyBlock
-    local AutoBuyBlockDelay
-    AutoBuyBlock = vape.Categories.Inventory:CreateModule({
-        Name = 'Auto Buy Block',
-        Tooltip = 'Automatically buys wool blocks from the shop',
-        Function = function(callback)
-            if callback then
-                repeat
-                    local shopId
-                    if entitylib.isAlive then
-                        local localPosition = entitylib.character.RootPart.Position
-                        for _, v in store.shop do
-                            if v.Shop and (v.RootPart.Position - localPosition).Magnitude <= 20 then
-                                shopId = v.Id
-                                break
-                            end
-                        end
-                    end
-                    if shopId then
-                        bedwars.Client:Get('BedwarsPurchaseItem'):CallServerAsync({
-                            shopItem = {
-                                currency = 'iron',
-                                itemType = 'wool_white',
-                                amount = 16,
-                                price = 8,
-                                disabledInQueue = {'mine_wars'},
-                                category = 'Blocks'
-                            },
-                            shopId = shopId
-                        })
-                    end
-                    task.wait(AutoBuyBlockDelay.Value)
-                until not AutoBuyBlock.Enabled
-            end
-        end,
-    })
-    AutoBuyBlockDelay = AutoBuyBlock:CreateSlider({
-        Name = 'Delay',
-        Min = 0,
-        Max = 2,
-        Default = 0.3,
-        Decimal = 10,
-    })
-
     AutoHotbar = vape.Categories.Inventory:CreateModule({
         Name = 'Auto Hotbar',
         Function = function(callback)
