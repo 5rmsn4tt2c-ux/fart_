@@ -8620,20 +8620,31 @@ end)
 run(function()
     local LegacyAnimation
 
-    local function setLegacyAnimation(enabled)
-        workspace:SetAttribute("RbxLegacyAnimationBlending", enabled)
+    local function isFirstPerson()
+        local char = lplr.Character
+        if not char then return false end
+        local head = char:FindFirstChild('Head')
+        if not head then return false end
+        return (gameCamera.CFrame.Position - head.CFrame.Position).Magnitude < 1
     end
 
     LegacyAnimation = vape.Categories.Render:CreateModule({
         Name = 'LegacyAnimation',
         Function = function(callback)
             if callback then
-                setLegacyAnimation(true)
+                local frameCounter = 0
+                workspace:SetAttribute('RbxLegacyAnimationBlending', not isFirstPerson())
+                LegacyAnimation:Clean(runService.Heartbeat:Connect(function()
+                    frameCounter += 1
+                    if frameCounter % 6 == 0 then
+                        workspace:SetAttribute('RbxLegacyAnimationBlending', not isFirstPerson())
+                    end
+                end))
             else
-                setLegacyAnimation(false)
+                workspace:SetAttribute('RbxLegacyAnimationBlending', false)
             end
         end,
-        Tooltip = 'turns on roblox legacy animation blending'
+        Tooltip = 'Enables legacy animation blending in 3rd person only'
     })
 end)
 
