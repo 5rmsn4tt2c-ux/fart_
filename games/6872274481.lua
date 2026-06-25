@@ -8625,7 +8625,7 @@ run(function()
         if not char then return false end
         local head = char:FindFirstChild('Head')
         if not head then return false end
-        return (gameCamera.CFrame.Position - head.CFrame.Position).Magnitude < 1
+        return head.LocalTransparencyModifier == 1
     end
 
     LegacyAnimation = vape.Categories.Render:CreateModule({
