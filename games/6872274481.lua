@@ -16325,6 +16325,7 @@ end)
 run(function()
     local AutoMelody
     local Range
+    local Interval
     local SelfHeal
     local TeammateHeal
 
@@ -16333,6 +16334,7 @@ run(function()
     	Function = function(call)
     		if call then
     			repeat
+    				local guitarItem = getItem('guitar')
     				local mag, hp, ent = Range.Value, math.huge, nil
     				if entitylib.isAlive then
     					local localPosition = entitylib.character.RootPart.Position
@@ -16346,13 +16348,32 @@ run(function()
     					end
     				end
 
-    				if ent and getItem('guitar') then
+    				if ent and guitarItem then
+    					local oldtool = store.hand.tool
+    					local oldhotbar = store.inventory.hotbarSlot
+    					local hotbar = getHotbar(guitarItem.tool)
+
+    					if hotbar then
+    						switchItem(guitarItem.tool)
+    						hotbarSwitch(hotbar)
+    					end
+
+    					task.wait(0.05)
+
     					bedwars.Client:Get(remotes.GuitarHeal):SendToServer({
     						healTarget = ent.Character
     					})
+
+    					task.spawn(function()
+    						task.wait(0.1)
+    						if oldtool then
+    							switchItem(oldtool)
+    							hotbarSwitch(oldhotbar)
+    						end
+    					end)
     				end
 
-    				task.wait(0.1)
+    				task.wait(Interval.Value)
     			until not AutoMelody.Enabled
     		end
     	end,
@@ -16373,6 +16394,15 @@ run(function()
     	Max = 30,
     	Default = 30,
     	Decimal = 4
+    })
+    Interval = AutoMelody:CreateSlider({
+    	Name = 'Interval',
+    	Min = 1,
+    	Max = 10,
+    	Default = 1,
+    	Suffix = function(val)
+    		return 's'
+    	end,
     })
 end)
 
