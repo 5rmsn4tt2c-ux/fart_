@@ -3788,7 +3788,6 @@ end)
 
 run(function()
     local orig_raycast
-    local HeadHitMouse
 
     HeadHit = vape.Categories.Blatant:CreateModule({
         Name = 'Head Hit',
@@ -3798,9 +3797,6 @@ run(function()
                 bedwars.QueryUtil.raycast = function(self, origin, direction, params)
                     local result = orig_raycast(self, origin, direction, params)
                     if result then
-                        if HeadHitMouse and HeadHitMouse.Enabled and not inputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
-                            return result
-                        end
                         local hitPart = result.Instance
                         local char = hitPart and hitPart.Parent
                         if char then
@@ -3826,11 +3822,6 @@ run(function()
             end
         end,
         Tooltip = 'Registers all hits on enemy body as headshots for bonus damage'
-    })
-
-    HeadHitMouse = HeadHit:CreateToggle({
-        Name = 'Require right click',
-        Tooltip = 'Only register headshots while holding right mouse button',
     })
 end)
 
