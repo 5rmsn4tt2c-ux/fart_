@@ -16366,9 +16366,9 @@ run(function()
 
     					task.spawn(function()
     						task.wait(0.1)
-    						if oldtool then
-    							switchItem(oldtool)
-    							hotbarSwitch(oldhotbar)
+    						hotbarSwitch(oldhotbar)
+    						if oldtool and oldtool.Parent then
+    							switchItem(oldtool, 0)
     						end
     					end)
     				end
