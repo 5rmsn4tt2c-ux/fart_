@@ -3795,15 +3795,24 @@ run(function()
         Function = function(callback)
             if callback then
                 launchHook = bedwars.ProjectileLaunchHook:Add('HeadHit', 50, function(nextLaunch, ...)
-                    -- Always call nextLaunch first so original code (Handle setup etc.) runs fully
-                    local origResult = nextLaunch(...)
+                    local origResult = nextLaunch(...)  -- always run first so Handle setup etc. completes
 
                     local ok, modified = pcall(function()
-                        if not origResult or not origResult.initialVelocity then return end
                         if not entitylib.isAlive then return end
+                        local _, projmeta, _, _, shootpos = ...
+                        if not projmeta then return end
 
-                        local _, projmeta = ...
+                        local meta = (projmeta.getProjectileMeta and projmeta:getProjectileMeta())
+                            or (projmeta.projectile and bedwars.ProjectileMeta[projmeta.projectile])
+                        if not meta then return end
+
                         local selfpos = entitylib.character.RootPart.Position
+                        -- Use original positionFrom if available, else shootpos arg, else root
+                        local positionFrom = (origResult and origResult.positionFrom) or shootpos or selfpos
+                        -- Use original speed if available, else compute from projmeta
+                        local speed = (origResult and origResult.initialVelocity and origResult.initialVelocity.Magnitude)
+                            or ((meta.launchVelocity or 100) * (projmeta.velocityMultiplier or 1))
+                        local deltaT = (origResult and origResult.deltaT) or meta.lifetimeSec or 3
 
                         local ent = entitylib.EntityMouse({
                             Origin = selfpos,
@@ -3815,18 +3824,8 @@ run(function()
                         })
                         if not ent or not ent.Head then return end
 
-                        local positionFrom = origResult.positionFrom or selfpos
-                        local speed = origResult.initialVelocity.Magnitude
+                        local gravity = (meta.gravitationalAcceleration or 196.2) * (projmeta.gravityMultiplier or 1)
                         local headpos = ent.Head.Position
-
-                        local gravity = 196.2
-                        if projmeta then
-                            local meta = (projmeta.getProjectileMeta and projmeta:getProjectileMeta())
-                                or (projmeta.projectile and bedwars.ProjectileMeta[projmeta.projectile])
-                            if meta then
-                                gravity = (meta.gravitationalAcceleration or 196.2) * (projmeta.gravityMultiplier or 1)
-                            end
-                        end
 
                         local calc = prediction.SolveTrajectory(
                             positionFrom, speed, gravity,
@@ -3837,10 +3836,11 @@ run(function()
                         local dir = (calc and (calc - positionFrom) or (headpos - positionFrom)).Unit
                         if dir ~= dir then return end
 
-                        local out = {}
-                        for k, v in origResult do out[k] = v end
-                        out.initialVelocity = dir * speed
-                        return out
+                        return {
+                            initialVelocity = dir * speed,
+                            positionFrom = positionFrom,
+                            deltaT = deltaT,
+                        }
                     end)
 
                     return (ok and modified) or origResult
