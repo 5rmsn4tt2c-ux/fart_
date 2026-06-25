@@ -3817,39 +3817,42 @@ run(function()
                 end
 
                 launchHook = bedwars.ProjectileLaunchHook:Add('HeadHit', 50, function(nextLaunch, ...)
-                    local self, projmeta, worldmeta, origin, shootpos = ...
-                    if not projmeta or not projmeta.projectile:find('arrow') then
-                        return nextLaunch(...)
-                    end
-                    local fromPos = shootpos or (entitylib.isAlive and entitylib.character.RootPart.Position)
-                    if not fromPos then return nextLaunch(...) end
-                    local ent = entitylib.EntityMouse({
-                        Part = 'RootPart',
-                        Range = 2000,
-                        Players = true,
-                        NPCs = true,
-                        Wallcheck = false,
-                        Origin = fromPos,
-                    })
-                    if not ent or not ent.Head then return nextLaunch(...) end
-                    local meta = projmeta:getProjectileMeta()
-                    local gravity = (meta.gravitationalAcceleration or 196.2) * projmeta.gravityMultiplier
-                    local projSpeed = meta.launchVelocity or 100
-                    local offsetpos = fromPos + (projmeta.projectile == 'owl_projectile' and Vector3.zero or projmeta.fromPositionOffset)
-                    local calc = prediction.SolveTrajectory(
-                        offsetpos, projSpeed, gravity,
-                        ent.Head.Position, ent.RootPart.Velocity,
-                        workspace.Gravity, ent.HipHeight,
-                        ent.Jumping and 42.6 or nil, nil
-                    )
-                    if not calc then return nextLaunch(...) end
-                    return {
-                        initialVelocity = CFrame.new(offsetpos, calc).LookVector * (projSpeed * projmeta.velocityMultiplier),
-                        positionFrom = offsetpos,
-                        deltaT = worldmeta and meta.predictionLifetimeSec or meta.lifetimeSec or 3,
-                        gravitationalAcceleration = gravity,
-                        drawDurationSeconds = projmeta.drawDurationSeconds,
-                    }
+                    local ok, result = pcall(function()
+                        local self, projmeta, worldmeta, origin, shootpos = ...
+                        if not projmeta then return end
+                        if store.hand.toolType ~= 'bow' then return end
+                        local fromPos = shootpos or (entitylib.isAlive and entitylib.character and entitylib.character.RootPart.Position)
+                        if not fromPos then return end
+                        local ent = entitylib.EntityMouse({
+                            Part = 'RootPart',
+                            Range = 2000,
+                            Players = true,
+                            NPCs = true,
+                            Wallcheck = false,
+                            Origin = fromPos,
+                        })
+                        if not ent or not ent.Head then return end
+                        local meta = projmeta:getProjectileMeta()
+                        if not meta then return end
+                        local gravity = (meta.gravitationalAcceleration or 196.2) * (projmeta.gravityMultiplier or 1)
+                        local projSpeed = meta.launchVelocity or 100
+                        local offsetpos = fromPos + (projmeta.fromPositionOffset or Vector3.zero)
+                        local calc = prediction.SolveTrajectory(
+                            offsetpos, projSpeed, gravity,
+                            ent.Head.Position, ent.RootPart.Velocity,
+                            workspace.Gravity, ent.HipHeight,
+                            ent.Jumping and 42.6 or nil, nil
+                        )
+                        if not calc then return end
+                        return {
+                            initialVelocity = CFrame.new(offsetpos, calc).LookVector * (projSpeed * math.max(projmeta.velocityMultiplier or 1, 0.1)),
+                            positionFrom = offsetpos,
+                            deltaT = (worldmeta and meta.predictionLifetimeSec or meta.lifetimeSec or 3),
+                            gravitationalAcceleration = gravity,
+                            drawDurationSeconds = projmeta.drawDurationSeconds,
+                        }
+                    end)
+                    return (ok and result) or nextLaunch(...)
                 end)
             else
                 if orig_raycast then
