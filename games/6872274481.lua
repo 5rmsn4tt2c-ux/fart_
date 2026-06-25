@@ -3787,72 +3787,50 @@ run(function()
 end)
 
 run(function()
-    local launchHook
-    local rayCheck = RaycastParams.new()
+    local objects = {}
+
+    local function createHeadHitbox(ent)
+        if ent.Targetable then
+            local head = ent.Head
+            if not head then return end
+            local hitbox = Instance.new('Part')
+            hitbox.Name = 'Head'
+            hitbox.Size = Vector3.new(4, 7, 4)
+            hitbox.CanCollide = false
+            hitbox.Massless = true
+            hitbox.Transparency = 1
+            hitbox.Parent = ent.Character
+            local weld = Instance.new('Motor6D')
+            weld.Part0 = hitbox
+            weld.Part1 = head
+            weld.C1 = CFrame.new(0, ent.NPC and 0 or -2.5, 0)
+            weld.Parent = hitbox
+            objects[ent] = hitbox
+        end
+    end
 
     HeadHit = vape.Categories.Blatant:CreateModule({
         Name = 'Head Hit',
         Function = function(callback)
             if callback then
-                launchHook = bedwars.ProjectileLaunchHook:Add('HeadHit', 50, function(nextLaunch, ...)
-                    local origResult = nextLaunch(...)  -- always run first so Handle setup etc. completes
-
-                    local ok, modified = pcall(function()
-                        if not entitylib.isAlive then return end
-                        local _, projmeta, _, _, shootpos = ...
-                        if not projmeta then return end
-
-                        local meta = (projmeta.getProjectileMeta and projmeta:getProjectileMeta())
-                            or (projmeta.projectile and bedwars.ProjectileMeta[projmeta.projectile])
-                        if not meta then return end
-
-                        local selfpos = entitylib.character.RootPart.Position
-                        -- Use original positionFrom if available, else shootpos arg, else root
-                        local positionFrom = (origResult and origResult.positionFrom) or shootpos or selfpos
-                        -- Use original speed if available, else compute from projmeta
-                        local speed = (origResult and origResult.initialVelocity and origResult.initialVelocity.Magnitude)
-                            or ((meta.launchVelocity or 100) * (projmeta.velocityMultiplier or 1))
-                        local deltaT = (origResult and origResult.deltaT) or meta.lifetimeSec or 3
-
-                        local ent = entitylib.EntityMouse({
-                            Origin = selfpos,
-                            Range = 180,
-                            Part = 'RootPart',
-                            Players = true,
-                            NPCs = true,
-                            Wallcheck = false,
-                        })
-                        if not ent or not ent.Head then return end
-
-                        local gravity = (meta.gravitationalAcceleration or 196.2) * (projmeta.gravityMultiplier or 1)
-                        local headpos = ent.Head.Position
-
-                        local calc = prediction.SolveTrajectory(
-                            positionFrom, speed, gravity,
-                            headpos, ent.RootPart.Velocity,
-                            workspace.Gravity, 0, nil, nil
-                        )
-
-                        local dir = (calc and (calc - positionFrom) or (headpos - positionFrom)).Unit
-                        if dir ~= dir then return end
-
-                        return {
-                            initialVelocity = dir * speed,
-                            positionFrom = positionFrom,
-                            deltaT = deltaT,
-                        }
-                    end)
-
-                    return (ok and modified) or origResult
-                end)
-            else
-                if launchHook then
-                    launchHook()
-                    launchHook = nil
+                HeadHit:Clean(entitylib.Events.EntityAdded:Connect(createHeadHitbox))
+                HeadHit:Clean(entitylib.Events.EntityRemoving:Connect(function(ent)
+                    if objects[ent] then
+                        objects[ent]:Destroy()
+                        objects[ent] = nil
+                    end
+                end))
+                for _, ent in entitylib.List do
+                    createHeadHitbox(ent)
                 end
+            else
+                for _, part in objects do
+                    part:Destroy()
+                end
+                table.clear(objects)
             end
         end,
-        Tooltip = 'Redirects all projectiles to hit the enemy head for head damage'
+        Tooltip = 'Enlarges enemy head hitbox to cover the full body'
     })
 end)
 
