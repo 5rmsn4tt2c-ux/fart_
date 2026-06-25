@@ -19823,7 +19823,13 @@ run(function()
 	local trackedParts = {}
 	local lastWeaponState = nil
 	local weaponCheckCounter = 0
-	
+
+	local function hasValidWeapon()
+		if not store.hand or not store.hand.tool then return false end
+		local t = store.hand.toolType
+		return t == 'sword' or t == 'bow'
+	end
+
 	local function removeCollision(character)
 		if not character then return end
 		
@@ -19878,7 +19884,7 @@ run(function()
 		lastWeaponState = isWeaponEquipped
 		
 		for _, entity in entitylib.List do
-			if entity.Character and entity.Character.Parent then
+			if entity.Character and entity.Character.Parent and entity.Player then
 				if isWeaponEquipped then
 					restoreCollision(entity.Character)
 				else
@@ -19936,7 +19942,7 @@ run(function()
 				
 				lastWeaponState = hasValidWeapon()
 				for _, entity in entitylib.List do
-					if entity.Character and entity.Character.Parent then
+					if entity.Character and entity.Character.Parent and entity.Player then
 						if not lastWeaponState then
 							removeCollision(entity.Character)
 						end
@@ -19945,7 +19951,7 @@ run(function()
 				
 				local entityAddedConn = entitylib.Events.EntityAdded:Connect(function(entity)
 					if not NoCollision.Enabled then return end
-					if entity.Character then
+					if entity.Character and entity.Player then
 						task.wait(0.05)
 						if not hasValidWeapon() then
 							removeCollision(entity.Character)
