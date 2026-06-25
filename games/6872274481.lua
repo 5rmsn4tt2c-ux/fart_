@@ -11608,7 +11608,7 @@ run(function()
         lastWeaponState = isWeaponEquipped
 
         for _, entity in entitylib.List do
-            if entity.Character and entity.Character.Parent then
+            if entity.Player and entity.Character and entity.Character.Parent then
                 if isWeaponEquipped then
                     restoreCollision(entity.Character)
                 else
@@ -11620,7 +11620,7 @@ run(function()
 
     local function updateMotorParts()
         for _, entity in entitylib.List do
-            if entity.Character then
+            if entity.Player and entity.Character then
                 local charMotors = motorParts[entity.Character]
                 if not charMotors then
                     charMotors = {}
@@ -11658,14 +11658,14 @@ run(function()
                 lastWeaponState = hasValidWeapon()
                 if not lastWeaponState then
                     for _, entity in entitylib.List do
-                        if entity.Character and entity.Character.Parent then
+                        if entity.Player and entity.Character and entity.Character.Parent then
                             removeCollision(entity.Character)
                         end
                     end
                 end
 
                 NoCollision:Clean(entitylib.Events.EntityAdded:Connect(function(entity)
-                    if entity.Character then
+                    if entity.Player and entity.Character then
                         task.wait(0.05)
                         if NoCollision.Enabled and not hasValidWeapon() then
                             removeCollision(entity.Character)
