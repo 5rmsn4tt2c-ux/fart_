@@ -4246,7 +4246,7 @@ run(function()
                                                 end
                                                 
                                                 local item, ammo, projectile, itemMeta = unpack(projectiles[projectileIndex])
-                                                if tick() > (FireRates[item.itemType] or 0) then
+                                                if tick() > (FireRates[item.itemType] or 0) and not (store.hand.tool and store.hand.tool.Name == 'telepearl') then
                                                     local projmeta = bedwars.ProjectileMeta[projectile]
                                                     local projSpeed = projmeta.launchVelocity
                                                     local gravity = projmeta.gravitationalAcceleration or 196.2
@@ -19307,7 +19307,7 @@ run(function()
         for _, item in store.inventory.inventory.items do
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
-            if ammo and table.find(Whitelist.ListEnabled, ammo) then
+            if ammo and not proj.maxStrengthChargeSec and table.find(Whitelist.ListEnabled, ammo) then
                 table.insert(items, {
                     item,
                     ammo,
@@ -19324,7 +19324,7 @@ run(function()
         for _, item in store.inventory.inventory.items do
             local proj = bedwars.ItemMeta[item.itemType].projectileSource
             local ammo = proj and getAmmo(proj)
-            if ammo and table.find(Whitelist2.ListEnabled, ammo) then
+            if ammo and not proj.maxStrengthChargeSec and table.find(Whitelist2.ListEnabled, ammo) then
                 table.insert(items, {
                     item,
                     ammo,
