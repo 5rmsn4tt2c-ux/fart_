@@ -4246,7 +4246,9 @@ run(function()
                                                 end
                                                 
                                                 local item, ammo, projectile, itemMeta = unpack(projectiles[projectileIndex])
-                                                if tick() > (FireRates[item.itemType] or 0) then
+                                                if itemMeta.maxStrengthChargeSec then
+                                                    projectileIndex = projectileIndex + 1
+                                                elseif tick() > (FireRates[item.itemType] or 0) then
                                                     local projmeta = bedwars.ProjectileMeta[projectile]
                                                     local projSpeed = projmeta.launchVelocity
                                                     local gravity = projmeta.gravitationalAcceleration or 196.2
