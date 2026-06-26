@@ -4300,8 +4300,7 @@ run(function()
                                                 end
                                             end
                                         end
-                                    end
-    
+
                                         if Mode.Value ~= 'Multi' then
                                             break
                                         end
@@ -4464,7 +4463,7 @@ run(function()
             pcall(function()
                 Legit.Object.Visible = callback
                 FireRate.Object.Visible = callback
-Whitelist.Object.Visible = callback
+                Whitelist.Object.Visible = callback
             end)
     	end
     })
