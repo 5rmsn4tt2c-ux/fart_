@@ -6722,6 +6722,113 @@ run(function()
 end)
 
 run(function()
+    local DodoESP
+    local Color
+    local Transparency
+    local Scale
+    local ShowDistance
+
+    local Folder = Instance.new('Folder')
+    Folder.Parent = vape.gui
+
+    local Reference = {}
+
+    local function Added(dodo)
+        local nametag = Instance.new('TextLabel')
+        nametag.TextSize = 14 * (Scale and Scale.Value or 1)
+        nametag.Font = Enum.Font.Arial
+        nametag.Text = 'Dodo'
+        nametag.Size = UDim2.fromOffset(60, 22)
+        nametag.AnchorPoint = Vector2.new(0.5, 1)
+        nametag.BackgroundColor3 = Color3.new()
+        nametag.BackgroundTransparency = Transparency and Transparency.Value or 0.5
+        nametag.BorderSizePixel = 0
+        nametag.Visible = false
+        nametag.TextColor3 = Color and Color3.fromHSV(Color.Hue, Color.Sat, Color.Value) or Color3.new(1, 1, 1)
+        nametag.RichText = true
+        nametag.Parent = Folder
+        Reference[dodo] = nametag
+    end
+
+    local function Removing(dodo)
+        if Reference[dodo] then
+            Reference[dodo]:Destroy()
+            Reference[dodo] = nil
+        end
+    end
+
+    DodoESP = vape.Categories.Render:CreateModule({
+        Name = 'Dodo ESP',
+        Function = function(call)
+            if call then
+                for _, v in collectionService:GetTagged('DodoBird') do
+                    Added(v)
+                end
+                DodoESP:Clean(collectionService:GetInstanceAddedSignal('DodoBird'):Connect(Added))
+                DodoESP:Clean(collectionService:GetInstanceRemovedSignal('DodoBird'):Connect(Removing))
+                DodoESP:Clean(runService.PreRender:Connect(function()
+                    local localPos = entitylib.isAlive and entitylib.character.RootPart.Position or Vector3.zero
+                    local occupied = {}
+                    pcall(function()
+                        for _, dodo in bedwars.DodoBirdController.playerToDodoBird do
+                            occupied[dodo] = true
+                        end
+                    end)
+                    for dodo, nametag in Reference do
+                        if not dodo.PrimaryPart then
+                            nametag.Visible = false
+                            continue
+                        end
+                        local pos = dodo.PrimaryPart.Position + Vector3.new(0, 3, 0)
+                        local screenPos, visible = gameCamera:WorldToViewportPoint(pos)
+                        nametag.Visible = visible
+                        if not visible then continue end
+
+                        local dist = math.round((localPos - dodo.PrimaryPart.Position).Magnitude)
+                        local riderTag = occupied[dodo] and ' <font color="rgb(255,100,100)">[Riding]</font>' or ''
+                        local text = 'Dodo' .. riderTag .. (ShowDistance.Enabled and ' | ' .. dist .. 'm' or '')
+                        nametag.Text = text
+                        nametag.TextSize = 14 * Scale.Value
+                        nametag.TextColor3 = Color3.fromHSV(Color.Hue, Color.Sat, Color.Value)
+                        nametag.BackgroundTransparency = Transparency.Value
+                        local size = getfontsize(removeTags(text), nametag.TextSize, nametag.FontFace, Vector2.new(100000, 100000))
+                        nametag.Size = UDim2.fromOffset(size.X + 8, size.Y + 7)
+                        nametag.Position = UDim2.fromOffset(screenPos.X, screenPos.Y)
+                    end
+                end))
+            else
+                for i in Reference do
+                    Removing(i)
+                end
+            end
+        end,
+        Tooltip = 'Shows where every dodo bird is on the map'
+    })
+
+    Color = DodoESP:CreateColorSlider({
+        Name = 'Text Color',
+    })
+    Transparency = DodoESP:CreateSlider({
+        Name = 'Transparency',
+        Default = 0.5,
+        Min = 0,
+        Max = 1,
+        Decimal = 100,
+    })
+    Scale = DodoESP:CreateSlider({
+        Name = 'Scale',
+        Default = 1,
+        Min = 0.1,
+        Max = 1.5,
+        Decimal = 10,
+    })
+    ShowDistance = DodoESP:CreateToggle({
+        Name = 'Show Distance',
+        Default = true,
+    })
+end)
+
+run(function()
     local Health
 
     Health = vape.Categories.Render:CreateModule({
