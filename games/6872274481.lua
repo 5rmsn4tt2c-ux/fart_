@@ -17805,7 +17805,6 @@ run(function()
    local HephaestusKit
    local ShowUI
    local AutoRepairToggle
-   local AntiCancelToggle
    local repairRemote = nil
 
    local mt = getrawmetatable(game)
@@ -17813,12 +17812,6 @@ run(function()
    setreadonly(mt, false)
    mt.__namecall = function(self, ...)
        local method = getnamecallmethod()
-       if method == 'UnbindFromRenderStep' and AntiCancelToggle and AntiCancelToggle.Enabled then
-           local name = select(1, ...)
-           if type(name) == 'string' and name:find('block%-place%-highlight') then
-               return
-           end
-       end
        if method == 'FireServer' then
            local args = {...}
            if type(args[1]) == 'string' and args[1] == 'tinker_self_repair' then
@@ -17911,12 +17904,6 @@ run(function()
        Name = 'Auto Repair',
        Default = true,
        Tooltip = 'Automatically fires Self-Repair when shield drops — press button once first'
-   })
-
-   AntiCancelToggle = HephaestusKit:CreateToggle({
-       Name = 'Anti Cancel',
-       Default = true,
-       Tooltip = 'Prevents damage from cancelling active repair'
    })
 
    ShowUI = HephaestusKit:CreateToggle({
