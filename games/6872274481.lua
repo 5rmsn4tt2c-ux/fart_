@@ -4040,7 +4040,7 @@ run(function()
     	for _, item in store.inventory.inventory.items do
     		local proj = bedwars.ItemMeta[item.itemType].projectileSource
     		local ammo = proj and getAmmo(proj)
-    		if ammo and (table.find(Whitelist.ListEnabled, ammo) or table.find(Whitelist.ListEnabled, item.itemType)) then
+    		if ammo and not proj.maxStrengthChargeSec and (table.find(Whitelist.ListEnabled, ammo) or table.find(Whitelist.ListEnabled, item.itemType)) then
     			table.insert(items, {
     				item,
     				ammo,
@@ -4246,9 +4246,7 @@ run(function()
                                                 end
                                                 
                                                 local item, ammo, projectile, itemMeta = unpack(projectiles[projectileIndex])
-                                                if itemMeta.maxStrengthChargeSec then
-                                                    projectileIndex = projectileIndex + 1
-                                                elseif tick() > (FireRates[item.itemType] or 0) then
+                                                if tick() > (FireRates[item.itemType] or 0) then
                                                     local projmeta = bedwars.ProjectileMeta[projectile]
                                                     local projSpeed = projmeta.launchVelocity
                                                     local gravity = projmeta.gravitationalAcceleration or 196.2
