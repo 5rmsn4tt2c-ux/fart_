@@ -17834,7 +17834,25 @@ run(function()
         return false
     end
 
+    -- Scan SwordController method upvalues once to find weapon config table (has .Weapon with respectAttackOverride)
+    local weaponConfig = nil
+    pcall(function()
+        local swc = bedwars.SwordController
+        for _, fn in {swc.sendServerRequest, swc.swingSwordAtMouse, swc.swingSwordInRegion, swc.isClickingTooFast} do
+            if type(fn) ~= 'function' then continue end
+            for i = 1, 30 do
+                local ok, _, val = pcall(debug.getupvalue, fn, i)
+                if not ok then break end
+                if type(val) == 'table' and type(rawget(val, 'Weapon')) == 'table' then
+                    weaponConfig = val
+                    return
+                end
+            end
+        end
+    end)
+
     local oldIsClickingTooFast = bedwars.SwordController.isClickingTooFast
+    local syncConn = nil
 
     HephaestusKit = vape.Categories.Kits:CreateModule({
         Name = 'Hephaestus Kit',
@@ -17843,12 +17861,30 @@ run(function()
                 bedwars.SwordController.isClickingTooFast = function(self, ...)
                     if AntiAttackBlock and AntiAttackBlock.Enabled then
                         self.lastSwing = os.clock()
+                        if weaponConfig then
+                            weaponConfig.Weapon.respectAttackOverride = false
+                        end
                         return false
                     end
                     return oldIsClickingTooFast(self, ...)
                 end
+                -- MartinSpeed approach: hook SwordSwing sync event to clear respectAttackOverride before game handler
+                pcall(function()
+                    local sync = bedwars.ClientSync
+                    if sync and type(sync.SwordSwing) == 'table' and type(sync.SwordSwing.setPriority) == 'function' then
+                        syncConn = sync.SwordSwing:setPriority(1):Connect(function()
+                            if AntiAttackBlock and AntiAttackBlock.Enabled and weaponConfig then
+                                weaponConfig.Weapon.respectAttackOverride = false
+                            end
+                        end)
+                    end
+                end)
             else
                 bedwars.SwordController.isClickingTooFast = oldIsClickingTooFast
+                if syncConn then
+                    pcall(function() syncConn:Disconnect() end)
+                    syncConn = nil
+                end
             end
             if callback then
                 local maxShield = 0
