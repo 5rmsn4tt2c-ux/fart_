@@ -17802,6 +17802,136 @@ run(function()
     })
 end)
 
+run(function()
+    local HephaestusKit
+    local AutoRepair
+    local Threshold
+
+    local COOLDOWN = 6
+    local ABILITY_NAMES = {'hephaestus_self_repair', 'tinker_self_repair'}
+
+    local function getKitShield(char)
+        local total = 0
+        for name, val in char:GetAttributes() do
+            if name:find('Shield') and type(val) == 'number' and val > 0 and name ~= 'Shield_POTION' then
+                total += val
+            end
+        end
+        return total
+    end
+
+    local function fireRepair()
+        for _, name in ABILITY_NAMES do
+            local ok, canUse = pcall(function()
+                return bedwars.AbilityController:canUseAbility(name)
+            end)
+            if ok and canUse then
+                pcall(function() bedwars.AbilityController:useAbility(name) end)
+                return true
+            end
+        end
+        return false
+    end
+
+    HephaestusKit = vape.Categories.Kits:CreateModule({
+        Name = 'Hephaestus Kit',
+        Function = function(callback)
+            if callback then
+                local maxShield = 0
+                local lastFired = 0
+
+                local frame = Instance.new('Frame')
+                frame.Size = UDim2.fromOffset(200, 44)
+                frame.Position = UDim2.new(0.5, -100, 1, -90)
+                frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+                frame.BackgroundTransparency = 0.15
+                frame.BorderSizePixel = 0
+                frame.Parent = vape.gui
+                Instance.new('UICorner', frame).CornerRadius = UDim.new(0, 8)
+
+                local stroke = Instance.new('UIStroke', frame)
+                stroke.Color = Color3.fromRGB(60, 60, 60)
+                stroke.Thickness = 1
+
+                local label = Instance.new('TextLabel')
+                label.Size = UDim2.fromScale(1, 1)
+                label.BackgroundTransparency = 1
+                label.TextColor3 = Color3.new(1, 1, 1)
+                label.TextSize = 15
+                label.Font = Enum.Font.GothamBold
+                label.Text = 'Ready'
+                label.Parent = frame
+
+                repeat
+                    task.wait(0.1)
+
+                    if not AutoRepair or not AutoRepair.Enabled then
+                        label.Text = 'Disabled'
+                        label.TextColor3 = Color3.fromRGB(120, 120, 120)
+                        stroke.Color = Color3.fromRGB(60, 60, 60)
+                        continue
+                    end
+
+                    if not entitylib.isAlive then
+                        label.Text = 'Ready'
+                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        stroke.Color = Color3.fromRGB(60, 60, 60)
+                        maxShield = 0
+                        lastFired = 0
+                        continue
+                    end
+
+                    local char = lplr.Character
+                    if not char then continue end
+
+                    local current = getKitShield(char)
+                    if current > maxShield then maxShield = current end
+
+                    local now = tick()
+                    local cooldownLeft = math.max(0, COOLDOWN - (now - lastFired))
+                    local needsRepair = maxShield > 0 and current < maxShield * (Threshold.Value / 100)
+
+                    if cooldownLeft > 0 then
+                        label.Text = 'Cooldown: ' .. math.ceil(cooldownLeft) .. 's'
+                        label.TextColor3 = Color3.fromRGB(255, 165, 0)
+                        stroke.Color = Color3.fromRGB(180, 100, 0)
+                    elseif needsRepair then
+                        label.Text = 'Repairing...'
+                        label.TextColor3 = Color3.fromRGB(80, 220, 80)
+                        stroke.Color = Color3.fromRGB(40, 160, 40)
+                        if fireRepair() then
+                            lastFired = now
+                        end
+                    else
+                        label.Text = 'Ready'
+                        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        stroke.Color = Color3.fromRGB(60, 60, 60)
+                    end
+
+                until not HephaestusKit.Enabled
+
+                frame:Destroy()
+            end
+        end,
+        Tooltip = 'Automatically repairs Hephaestus shield when it drops below threshold'
+    })
+
+    AutoRepair = HephaestusKit:CreateToggle({
+        Name = 'Auto Repair',
+        Default = true,
+        Tooltip = 'Automatically trigger repair when shield falls below threshold'
+    })
+
+    Threshold = HephaestusKit:CreateSlider({
+        Name = 'Repair At',
+        Min = 10,
+        Max = 100,
+        Default = 80,
+        Suffix = function(val)
+            return val .. '%'
+        end
+    })
+end)
 
 --[[
     Legit
