@@ -17967,29 +17967,24 @@ run(function()
    local HephaestusKit
    local ShowUI
    local AutoRepairToggle
-   local repairRemote = nil
 
-   local mt = getrawmetatable(game)
-   local oldNc = mt.__namecall
-   setreadonly(mt, false)
-   mt.__namecall = function(self, ...)
-       local method = getnamecallmethod()
-       if method == 'FireServer' then
-           local args = {...}
-           if type(args[1]) == 'string' and args[1] == 'tinker_self_repair' then
-               repairRemote = self
+   local function findRepairRemote()
+       for _, v in game:GetDescendants() do
+           if (v:IsA('RemoteEvent') or v:IsA('RemoteFunction')) then
+               local name = v.Name:lower()
+               if name:find('tinker') and name:find('repair') then
+                   return v
+               end
            end
        end
-       return oldNc(self, ...)
    end
-   setreadonly(mt, true)
 
    HephaestusKit = vape.Categories.Kits:CreateModule({
        Name = 'Hephaestus Kit',
        Function = function(callback)
            if callback then
-               local maxSeen = 0
                local lastFired = 0
+               local repairRemote = findRepairRemote()
 
                local frame = Instance.new('Frame')
                frame.Size = UDim2.fromOffset(150, 36)
@@ -17997,7 +17992,7 @@ run(function()
                frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
                frame.BackgroundTransparency = 0.3
                frame.BorderSizePixel = 0
-               frame.Visible = ShowUI and ShowUI.Enabled or true
+               frame.Visible = true
                frame.Parent = vape.gui
                Instance.new('UICorner', frame).CornerRadius = UDim.new(0, 8)
 
@@ -18015,38 +18010,30 @@ run(function()
 
                    frame.Visible = ShowUI and ShowUI.Enabled or false
 
+                   if not repairRemote then
+                       repairRemote = findRepairRemote()
+                       label.Text = '🔧 No Remote'
+                       label.TextColor3 = Color3.fromRGB(255, 100, 100)
+                       continue
+                   end
+
                    if not entitylib.isAlive then
                        label.Text = '🔧 Dead'
+                       label.TextColor3 = Color3.new(1, 1, 1)
                        continue
                    end
 
                    if AutoRepairToggle and AutoRepairToggle.Enabled then
-                       if not repairRemote then
-                           label.Text = '🔧 Press Repair!'
-                           label.TextColor3 = Color3.new(1, 1, 1)
-                           continue
-                       end
-
-                       local char = game:GetService('Players').LocalPlayer.Character
-                       if not char then continue end
-
-                       local tinker = char:GetAttribute('Shield_TINKER_MACHINE') or 0
-                       if tinker > maxSeen then maxSeen = tinker end
-                       if maxSeen == 0 then continue end
-
                        local now = tick()
                        local cooldownLeft = math.max(0, 6 - (now - lastFired))
 
-                       if tinker >= maxSeen then
-                           label.Text = '🔧 Shield Full'
-                           label.TextColor3 = Color3.fromRGB(100, 255, 100)
-                       elseif cooldownLeft > 0 then
+                       if cooldownLeft > 0 then
                            label.Text = '🔧 Next: ' .. math.ceil(cooldownLeft) .. 's'
                            label.TextColor3 = Color3.fromRGB(255, 100, 100)
                        else
                            label.Text = '🔧 Repairing...'
                            label.TextColor3 = Color3.fromRGB(255, 200, 0)
-                           repairRemote:FireServer('tinker_self_repair')
+                           pcall(function() repairRemote:FireServer() end)
                            lastFired = now
                        end
                    else
@@ -18059,13 +18046,13 @@ run(function()
                frame:Destroy()
            end
        end,
-       Tooltip = 'Hephaestus kit tools — auto repair and anti cancel'
+       Tooltip = 'Hephaestus kit — auto repair'
    })
 
    AutoRepairToggle = HephaestusKit:CreateToggle({
        Name = 'Auto Repair',
        Default = true,
-       Tooltip = 'Automatically fires Self-Repair when shield drops — press button once first'
+       Tooltip = 'Automatically fires Self-Repair on cooldown'
    })
 
    ShowUI = HephaestusKit:CreateToggle({
@@ -18073,12 +18060,6 @@ run(function()
        Default = true,
        Tooltip = 'Show or hide the repair countdown'
    })
-
-   vape:Clean(function()
-       setreadonly(mt, false)
-       mt.__namecall = oldNc
-       setreadonly(mt, true)
-   end)
 end)
 
 --[[
