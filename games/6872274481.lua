@@ -4259,7 +4259,8 @@ run(function()
                                                     local hotbar = getHotbar(item.tool)
 
                                                     if isBow then
-                                                        -- Natural fire path: mouse simulation lets server track charge time → real damage scaling
+                                                        if inputService.MouseEnabled then
+                                                        -- Desktop: natural fire path lets server track charge time → real damage scaling
                                                         local tgt, capturedPos = v, selfpos
                                                         FireRates[item.itemType] = tick() + drawDuration + itemMeta.fireDelaySec
                                                         lastShot = tick() + lplr:GetNetworkPing() + FireRate.Value + drawDuration
@@ -4304,6 +4305,36 @@ run(function()
                                                                 if Legit.Enabled then hotbarSwitch(oldhotbar) end
                                                             end)
                                                         end)
+                                                        else
+                                                        -- Mobile: no mouse functions, direct fire with full charge for max damage
+                                                        if hotbar then
+                                                            switchItem(item.tool)
+                                                            if Legit.Enabled then hotbarSwitch(hotbar) end
+                                                        end
+                                                        local calc = prediction.SolveTrajectory(selfpos, projSpeed, gravity, v.RootPart.Position, v.RootPart.Velocity, workspace.Gravity, v.HipHeight, v.Jumping and 42.6 or nil, nil, nil, lplr:GetNetworkPing())
+                                                        if calc then
+                                                            local sdir, id = CFrame.lookAt(selfpos, calc).LookVector, httpService:GenerateGUID(true)
+                                                            local shootPosition = (CFrame.new(selfpos, calc) * CFrame.new(Vector3.new(-bedwars.BowConstantsTable.RelX, -bedwars.BowConstantsTable.RelY, -bedwars.BowConstantsTable.RelZ))).Position
+                                                            bedwars.ProjectileController:createLocalProjectile(itemMeta, ammo, projectile, shootPosition, id, sdir * projSpeed, {drawDurationSeconds = maxChargeSec})
+                                                            local res = projectileRemote:InvokeServer(
+                                                                item.tool, ammo, projectile, shootPosition, pos, sdir * projSpeed, id,
+                                                                {drawDurationSeconds = maxChargeSec, shotId = httpService:GenerateGUID(false)},
+                                                                workspace:GetServerTimeNow() - 0.045
+                                                            )
+                                                            if res then
+                                                                pcall(function() res.Parent = replicatedStorage end)
+                                                                FireRates[item.itemType] = tick() + itemMeta.fireDelaySec
+                                                                local shoot = itemMeta.launchSound
+                                                                shoot = shoot and shoot[math.random(1, #shoot)] or nil
+                                                                if shoot then bedwars.SoundManager:playSound(shoot) end
+                                                            end
+                                                            lastShot = tick() + (lplr:GetNetworkPing() + FireRate.Value)
+                                                        end
+                                                        if oldtool then switchItem(oldtool) end
+                                                        task.spawn(function()
+                                                            if Legit.Enabled then hotbarSwitch(oldhotbar) end
+                                                        end)
+                                                        end
                                                     else
                                                         -- Non-bow projectiles: direct InvokeServer
                                                         if hotbar then
