@@ -8737,29 +8737,29 @@ run(function()
     stash.Parent = vape.gui
 
     local matColors = {
-        [Enum.Material.Grass]        = Color3.fromRGB(28, 92, 38),
-        [Enum.Material.LeafyGrass]   = Color3.fromRGB(32, 105, 42),
-        [Enum.Material.Ground]       = Color3.fromRGB(88, 52, 25),
-        [Enum.Material.Mud]          = Color3.fromRGB(72, 42, 20),
-        [Enum.Material.Rock]         = Color3.fromRGB(82, 86, 94),
-        [Enum.Material.Pebble]       = Color3.fromRGB(78, 82, 88),
-        [Enum.Material.Cobblestone]  = Color3.fromRGB(62, 68, 78),
-        [Enum.Material.Concrete]     = Color3.fromRGB(85, 88, 96),
-        [Enum.Material.Pavement]     = Color3.fromRGB(78, 82, 90),
-        [Enum.Material.Slate]        = Color3.fromRGB(42, 52, 68),
-        [Enum.Material.Basalt]       = Color3.fromRGB(38, 38, 44),
-        [Enum.Material.Marble]       = Color3.fromRGB(198, 192, 180),
-        [Enum.Material.Limestone]    = Color3.fromRGB(178, 158, 118),
-        [Enum.Material.Sand]         = Color3.fromRGB(182, 162, 118),
-        [Enum.Material.Wood]         = Color3.fromRGB(162, 75, 22),
-        [Enum.Material.WoodPlanks]   = Color3.fromRGB(168, 80, 26),
-        [Enum.Material.Brick]        = Color3.fromRGB(142, 24, 32),
-        [Enum.Material.Metal]        = Color3.fromRGB(108, 115, 128),
-        [Enum.Material.DiamondPlate] = Color3.fromRGB(102, 110, 126),
-        [Enum.Material.Foil]         = Color3.fromRGB(142, 150, 165),
-        [Enum.Material.Glacier]      = Color3.fromRGB(138, 168, 195),
-        [Enum.Material.Glass]        = Color3.fromRGB(32, 55, 98),
-        [Enum.Material.CrackedLava]  = Color3.fromRGB(168, 42, 12),
+        [Enum.Material.Grass]        = Color3.fromRGB(42, 168, 58),
+        [Enum.Material.LeafyGrass]   = Color3.fromRGB(48, 182, 65),
+        [Enum.Material.Ground]       = Color3.fromRGB(118, 72, 35),
+        [Enum.Material.Mud]          = Color3.fromRGB(95, 58, 28),
+        [Enum.Material.Rock]         = Color3.fromRGB(105, 110, 120),
+        [Enum.Material.Pebble]       = Color3.fromRGB(98, 102, 112),
+        [Enum.Material.Cobblestone]  = Color3.fromRGB(85, 92, 105),
+        [Enum.Material.Concrete]     = Color3.fromRGB(108, 112, 122),
+        [Enum.Material.Pavement]     = Color3.fromRGB(100, 105, 115),
+        [Enum.Material.Slate]        = Color3.fromRGB(55, 68, 88),
+        [Enum.Material.Basalt]       = Color3.fromRGB(45, 45, 52),
+        [Enum.Material.Marble]       = Color3.fromRGB(210, 205, 192),
+        [Enum.Material.Limestone]    = Color3.fromRGB(192, 172, 132),
+        [Enum.Material.Sand]         = Color3.fromRGB(198, 175, 128),
+        [Enum.Material.Wood]         = Color3.fromRGB(195, 118, 42),
+        [Enum.Material.WoodPlanks]   = Color3.fromRGB(205, 125, 48),
+        [Enum.Material.Brick]        = Color3.fromRGB(175, 38, 42),
+        [Enum.Material.Metal]        = Color3.fromRGB(118, 125, 140),
+        [Enum.Material.DiamondPlate] = Color3.fromRGB(112, 122, 142),
+        [Enum.Material.Foil]         = Color3.fromRGB(155, 162, 178),
+        [Enum.Material.Glacier]      = Color3.fromRGB(148, 185, 215),
+        [Enum.Material.Glass]        = Color3.fromRGB(48, 88, 185),
+        [Enum.Material.CrackedLava]  = Color3.fromRGB(195, 52, 18),
     }
 
     local skipMat = {
@@ -8771,7 +8771,11 @@ run(function()
 
     local function deepenColor(c)
         local h, s, v = Color3.toHSV(c)
-        return Color3.fromHSV(h, math.min(1, s * 1.2), math.max(0.15, v * 0.85))
+        -- near-white/gray parts (island terrain) snap to a clean visible gray
+        if s < 0.12 then
+            return Color3.fromHSV(h, 0, math.min(0.68, math.max(0.42, v * 0.72)))
+        end
+        return Color3.fromHSV(h, math.min(1, s * 1.4), math.max(0.22, v * 0.88))
     end
 
     local function applyPart(part)
