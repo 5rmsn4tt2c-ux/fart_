@@ -17821,38 +17821,70 @@ run(function()
         return total
     end
 
+    -- Dynamically find the repair ability name: scan AbilityController upvalues for any
+    -- table that maps ability names, then filter for anything containing 'repair'
+    local function discoverRepairAbilities()
+        local found = {}
+        pcall(function()
+            local ac = bedwars.AbilityController
+            for _, fn in {ac.canUseAbility, ac.useAbility} do
+                if type(fn) ~= 'function' then continue end
+                for i = 1, 40 do
+                    local ok, _, val = pcall(debug.getupvalue, fn, i)
+                    if not ok then break end
+                    if type(val) ~= 'table' then continue end
+                    for k in val do
+                        if type(k) == 'string' and k:lower():find('repair') then
+                            table.insert(found, k)
+                        end
+                    end
+                end
+            end
+        end)
+        return found
+    end
+
     local function fireRepair()
-        for _, name in ABILITY_NAMES do
+        local ac = bedwars.AbilityController
+        -- Merge dynamic discoveries with hardcoded candidates (dynamic first)
+        local names = discoverRepairAbilities()
+        for _, n in ABILITY_NAMES do
+            if not table.find(names, n) then table.insert(names, n) end
+        end
+        for _, name in names do
             local ok, canUse = pcall(function()
-                return bedwars.AbilityController:canUseAbility(name)
+                return ac:canUseAbility(name)
             end)
             if ok and canUse then
-                pcall(function() bedwars.AbilityController:useAbility(name) end)
+                pcall(function() ac:useAbility(name) end)
                 return true
             end
         end
         return false
     end
 
-    -- Scan SwordController method upvalues once to find weapon config table (has .Weapon with respectAttackOverride)
+    -- Find weapon config (has .Weapon table with respectAttackOverride).
+    -- Use pcall + normal field access to handle TypeScript __index-based tables.
     local weaponConfig = nil
     pcall(function()
         local swc = bedwars.SwordController
         for _, fn in {swc.sendServerRequest, swc.swingSwordAtMouse, swc.swingSwordInRegion, swc.isClickingTooFast} do
             if type(fn) ~= 'function' then continue end
-            for i = 1, 30 do
+            for i = 1, 40 do
                 local ok, _, val = pcall(debug.getupvalue, fn, i)
                 if not ok then break end
-                if type(val) == 'table' and type(rawget(val, 'Weapon')) == 'table' then
-                    weaponConfig = val
-                    return
-                end
+                if type(val) ~= 'table' then continue end
+                local ok2, weapon = pcall(function() return val.Weapon end)
+                if not ok2 or type(weapon) ~= 'table' then continue end
+                local ok3 = pcall(function() return weapon.respectAttackOverride end)
+                if ok3 then weaponConfig = val; return end
             end
         end
     end)
 
     local oldIsClickingTooFast = bedwars.SwordController.isClickingTooFast
     local syncConn = nil
+    local clearConn = nil
 
     HephaestusKit = vape.Categories.Kits:CreateModule({
         Name = 'Hephaestus Kit',
@@ -17868,7 +17900,13 @@ run(function()
                     end
                     return oldIsClickingTooFast(self, ...)
                 end
-                -- MartinSpeed approach: hook SwordSwing sync event to clear respectAttackOverride before game handler
+                -- Continuously clear respectAttackOverride every frame (Hephaestus sets it to true during repair)
+                clearConn = game:GetService('RunService').Heartbeat:Connect(function()
+                    if AntiAttackBlock and AntiAttackBlock.Enabled and weaponConfig then
+                        pcall(function() weaponConfig.Weapon.respectAttackOverride = false end)
+                    end
+                end)
+                -- MartinSpeed pattern: hook SwordSwing sync event at high priority
                 pcall(function()
                     local sync = bedwars.ClientSync
                     if sync and type(sync.SwordSwing) == 'table' and type(sync.SwordSwing.setPriority) == 'function' then
@@ -17881,6 +17919,7 @@ run(function()
                 end)
             else
                 bedwars.SwordController.isClickingTooFast = oldIsClickingTooFast
+                if clearConn then clearConn:Disconnect(); clearConn = nil end
                 if syncConn then
                     pcall(function() syncConn:Disconnect() end)
                     syncConn = nil
@@ -17929,18 +17968,23 @@ run(function()
                     stroke.Color = color
                 end
 
+                local prevAlive = false  -- sentinel: detect spawn moment to capture true max shield
+
                 repeat
                     task.wait(0.1)
 
                     if not AutoRepair or not AutoRepair.Enabled then
                         setState('Disabled', Color3.fromRGB(80, 80, 80))
+                        prevAlive = false
                         continue
                     end
 
-                    if not entitylib.isAlive then
+                    local alive = entitylib.isAlive
+                    if not alive then
                         setState('Ready', Color3.fromRGB(100, 200, 255))
                         maxShield = 0
                         lastFired = 0
+                        prevAlive = false
                         continue
                     end
 
@@ -17948,7 +17992,14 @@ run(function()
                     if not char then continue end
 
                     local current = getKitShield(char)
-                    if current > maxShield then maxShield = current end
+
+                    -- On first tick alive (just spawned): treat current value as the kit max
+                    if not prevAlive and current > 0 then
+                        maxShield = current
+                    elseif current > maxShield then
+                        maxShield = current
+                    end
+                    prevAlive = true
 
                     local now = tick()
                     local cooldownLeft = math.max(0, COOLDOWN - (now - lastFired))
