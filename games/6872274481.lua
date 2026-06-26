@@ -11680,13 +11680,6 @@ run(function()
 	local NoCollision
 	local connections = {}
 	local trackedParts = {}
-	local lastWeaponState = nil
-	local weaponCheckCounter = 0
-
-	local function hasValidWeapon()
-		local toolType = store.hand and store.hand.toolType
-		return toolType == 'sword' or toolType == 'bow'
-	end
 
 	local function removeCollision(character)
 		if not character then return end
@@ -11727,27 +11720,10 @@ run(function()
 		end
 	end
 
-	local function updateAllCollisions(forceUpdate)
-		weaponCheckCounter = weaponCheckCounter + 1
-		local shouldCheck = forceUpdate or (weaponCheckCounter % 3 == 0)
-
-		if not shouldCheck then return end
-
-		local isWeaponEquipped = hasValidWeapon()
-
-		if not forceUpdate and lastWeaponState == isWeaponEquipped then
-			return
-		end
-
-		lastWeaponState = isWeaponEquipped
-
+	local function updateAllCollisions()
 		for _, entity in entitylib.List do
 			if entity.Player and entity.Character and entity.Character.Parent then
-				if isWeaponEquipped then
-					restoreCollision(entity.Character)
-				else
-					removeCollision(entity.Character)
-				end
+				removeCollision(entity.Character)
 			end
 		end
 	end
@@ -11789,7 +11765,7 @@ run(function()
 					frameCounter = frameCounter + 1
 
 					if frameCounter % 6 == 0 then
-						updateAllCollisions(false)
+						updateAllCollisions()
 					end
 
 					if frameCounter % 15 == 0 then
@@ -11798,22 +11774,13 @@ run(function()
 				end)
 				table.insert(connections, heartbeatConn)
 
-				lastWeaponState = hasValidWeapon()
-				for _, entity in entitylib.List do
-					if entity.Player and entity.Character and entity.Character.Parent then
-						if not lastWeaponState then
-							removeCollision(entity.Character)
-						end
-					end
-				end
+				updateAllCollisions()
 
 				local entityAddedConn = entitylib.Events.EntityAdded:Connect(function(entity)
 					if not NoCollision.Enabled then return end
 					if entity.Player and entity.Character then
 						task.wait(0.05)
-						if not hasValidWeapon() then
-							removeCollision(entity.Character)
-						end
+						removeCollision(entity.Character)
 					end
 				end)
 				table.insert(connections, entityAddedConn)
@@ -11826,32 +11793,7 @@ run(function()
 				end)
 				table.insert(connections, entityRemovedConn)
 
-				if vapeEvents and vapeEvents.InventoryChanged then
-					local inventoryConn = vapeEvents.InventoryChanged.Event:Connect(function()
-						if NoCollision.Enabled then
-							updateAllCollisions(true)
-						end
-					end)
-					table.insert(connections, inventoryConn)
-				else
-					local lastTool = store.hand and store.hand.tool
-					local toolFrameCounter = 0
-					local monitorConn = runService.Heartbeat:Connect(function()
-						if not NoCollision.Enabled then return end
-
-						toolFrameCounter = toolFrameCounter + 1
-						if toolFrameCounter % 5 == 0 then
-							local currentTool = store.hand and store.hand.tool
-							if currentTool ~= lastTool then
-								lastTool = currentTool
-								updateAllCollisions(true)
-							end
-						end
-					end)
-					table.insert(connections, monitorConn)
-				end
-
-				updateAllCollisions(true)
+				updateAllCollisions()
 			else
 				for _, conn in connections do
 					conn:Disconnect()
@@ -11866,8 +11808,6 @@ run(function()
 
 				table.clear(trackedParts)
 				table.clear(motorParts)
-				lastWeaponState = nil
-				weaponCheckCounter = 0
 			end
 		end,
 		Tooltip = 'Mine/build through players and NPCs'
