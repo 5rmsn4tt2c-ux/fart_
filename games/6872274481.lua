@@ -4256,6 +4256,10 @@ run(function()
                                                     local drawDuration = chargeRatio * maxChargeSec
                                                     local projSpeed = projmeta.launchVelocity * (isBow and (minScalar + (1 - minScalar) * chargeRatio) or 1)
                                                     local gravity = projmeta.gravitationalAcceleration or 196.2
+                                                    if isBow then
+                                                        warn(string.format('[BOW] item=%s proj=%s charge=%.0f%% drawDur=%.3fs speed=%.1f/%.1f minScalar=%.3f maxCharge=%.2f', item.itemType, projectile, chargeRatio*100, drawDuration, projSpeed, projmeta.launchVelocity, minScalar, maxChargeSec))
+                                                        warn(string.format('[BOW] projmeta keys: launchVelocity=%.1f gravity=%.1f', projmeta.launchVelocity, gravity))
+                                                    end
                                                     local oldhotbar, oldtool = store.inventory.hotbarSlot, store.hand.tool
                                                     local hotbar = getHotbar(item.tool)
                                                     if hotbar then
@@ -4285,6 +4289,9 @@ run(function()
                                                             },
                                                             workspace:GetServerTimeNow() - 0.045
                                                         )
+                                                        if isBow then
+                                                            warn(string.format('[BOW] server res=%s resType=%s', tostring(res ~= nil), typeof(res)))
+                                                        end
                                                         if res then
                                                             pcall(function()
                                                                 res.Parent = replicatedStorage
