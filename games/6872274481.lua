@@ -4263,10 +4263,6 @@ run(function()
                                                         end
                                                     end
 
-                                                    -- Reset server charge start time so server computes drawDuration from scratch
-                                                    item.tool:Activate()
-                                                    task.wait(drawDuration)
-
                                                     local calc = prediction.SolveTrajectory(selfpos, projSpeed, gravity, v.RootPart.Position, v.RootPart.Velocity, workspace.Gravity, v.HipHeight, v.Jumping and 42.6 or nil, nil, nil, lplr:GetNetworkPing())
                                                     if calc then
                                                         local sdir, id = CFrame.lookAt(selfpos, calc).LookVector, httpService:GenerateGUID(true)
