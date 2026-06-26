@@ -8945,12 +8945,17 @@ run(function()
                 repeat task.wait() until store.map or not KingAuto.Enabled
                 if not KingAuto.Enabled then return end
 
-                -- Apply flat colors + strip textures only on placed blocks
+                -- Apply color map to placed blocks first (saves them so general scan skips)
                 local blocks = store.map:FindFirstChild('Blocks')
                 if blocks then
                     for _, blockModel in blocks:GetChildren() do
                         pcall(scanBlock, blockModel, blockColors[blockModel.Name])
                     end
+                end
+
+                -- Strip textures + SmoothPlastic across the whole map
+                for _, v in store.map:GetDescendants() do
+                    if v:IsA('BasePart') then pcall(applyPart, v, nil) end
                 end
 
                 -- Watch for newly placed blocks
