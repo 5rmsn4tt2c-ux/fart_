@@ -8771,11 +8771,14 @@ run(function()
 
     local function deepenColor(c)
         local h, s, v = Color3.toHSV(c)
-        -- near-white/gray parts (island terrain) snap to a clean visible gray
-        if s < 0.12 then
-            return Color3.fromHSV(h, 0, math.min(0.68, math.max(0.42, v * 0.72)))
+        if v < 0.12 then
+            return c
         end
-        return Color3.fromHSV(h, math.min(1, s * 1.4), math.max(0.22, v * 0.88))
+        if s < 0.12 then
+            -- near-white/gray terrain: snap to solid medium-dark gray
+            return Color3.fromHSV(0, 0, math.min(0.55, math.max(0.35, v * 0.58)))
+        end
+        return Color3.fromHSV(h, math.min(1, s * 1.5), math.max(0.25, v * 0.85))
     end
 
     local function applyPart(part)
