@@ -18356,9 +18356,18 @@ run(function()
                     end
                     return oldIsClickingTooFast(self, ...)
                 end
-                -- Continuously clear respectAttackOverride every frame (Hephaestus sets it to true during repair)
+                -- Continuously clear attack locks every frame.
+                -- Hephaestus repair sets StunnedUntilTime (blocks Killaura Attackable check)
+                -- and may set respectAttackOverride. Both need clearing.
                 clearConn = game:GetService('RunService').Heartbeat:Connect(function()
-                    if AntiAttackBlock and AntiAttackBlock.Enabled and weaponConfig then
+                    if not AntiAttackBlock or not AntiAttackBlock.Enabled then return end
+                    -- Clear StunnedUntilTime so Killaura's Attackable check passes
+                    local char = lplr.Character
+                    if char then
+                        pcall(function() char:SetAttribute('StunnedUntilTime', 0) end)
+                    end
+                    -- Clear weapon config override if we found it
+                    if weaponConfig then
                         pcall(function() weaponConfig.Weapon.respectAttackOverride = false end)
                     end
                 end)
