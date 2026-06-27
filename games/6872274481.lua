@@ -8975,11 +8975,13 @@ run(function()
                 for _, p in savedLightProps do
                     origLighting[p] = lightingService[p]
                 end
+                -- Remove ALL sky/atmosphere/bloom/sunrays so game can't restore them
                 for _, child in lightingService:GetChildren() do
                     if child:IsA('Sky') or child:IsA('Atmosphere') or child:IsA('BloomEffect') or child:IsA('SunRaysEffect') then
                         child.Parent = lightStash
                     end
                 end
+                -- Disable workspace clouds (Terrain.Clouds)
                 local terrain = workspace:FindFirstChildOfClass('Terrain')
                 if terrain then
                     local clouds = terrain:FindFirstChildOfClass('Clouds')
@@ -8996,14 +8998,22 @@ run(function()
                 lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                 lightingService.FogEnd               = 1200
                 lightingService.FogStart             = 600
+                -- High density so sky background appears solid grey
                 local atmo = Instance.new('Atmosphere')
-                atmo.Density = 0.35
-                atmo.Color   = Color3.fromRGB(140, 140, 140)
-                atmo.Decay   = Color3.fromRGB(120, 120, 120)
+                atmo.Density = 0.85
+                atmo.Color   = Color3.fromRGB(145, 145, 145)
+                atmo.Decay   = Color3.fromRGB(125, 125, 125)
                 atmo.Glare   = 0
                 atmo.Haze    = 0
+                atmo.Offset  = 0
                 atmo.Parent  = lightingService
                 table.insert(addedLighting, atmo)
+                -- If game tries to re-add a Sky, immediately remove it
+                KingAuto:Clean(lightingService.ChildAdded:Connect(function(child)
+                    if child:IsA('Sky') or (child:IsA('Atmosphere') and child ~= atmo) then
+                        child.Parent = lightStash
+                    end
+                end))
             else
                 -- Restore blocks
                 for part in saved do restorePart(part) end
