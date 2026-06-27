@@ -9473,6 +9473,7 @@ run(function()
 
     local function updateCrosshair()
         if not MannyReaper.Enabled then return end
+        inputService.MouseIconEnabled = false
         local center = gameCamera.ViewportSize / 2
         local size = Size.Value
         local gap = Gap.Value
@@ -9561,6 +9562,7 @@ run(function()
                     pcall(function() v:Remove() end)
                 end
                 table.clear(lines)
+                inputService.MouseIconEnabled = true
                 pcall(function()
                     if oldShowCrosshair then
                         bedwars.ViewmodelController.showCrosshair = oldShowCrosshair
