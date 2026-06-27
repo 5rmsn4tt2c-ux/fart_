@@ -18229,8 +18229,19 @@ run(function()
     local AntiAttackBlock
 
     local COOLDOWN = 6
-    local ABILITY_NAMES = {'hephaestus_self_repair', 'tinker_self_repair'}
+    -- Hardcoded candidates covering every known naming convention
+    local ABILITY_NAMES = {
+        'hephaestus_self_repair', 'tinker_self_repair',
+        'hephaestus_repair', 'tinker_repair',
+        'HEPHAESTUS_SELF_REPAIR', 'TINKER_SELF_REPAIR',
+        'HEPHAESTUS_REPAIR', 'TINKER_REPAIR',
+        'self_repair', 'SELF_REPAIR',
+        'shield_repair', 'SHIELD_REPAIR',
+        'kit_repair', 'KIT_REPAIR',
+        'forge_repair', 'FORGE_REPAIR',
+    }
 
+    -- Read any Shield_* attributes (potion excluded) from the character
     local function getKitShield(char)
         local total = 0
         for name, val in char:GetAttributes() do
@@ -18241,20 +18252,29 @@ run(function()
         return total
     end
 
-    -- Dynamically find the repair ability name: scan AbilityController upvalues for any
-    -- table that maps ability names, then filter for anything containing 'repair'
+    -- Scan AbilityController's own fields AND method upvalues for any key containing 'repair'
     local function discoverRepairAbilities()
         local found = {}
         pcall(function()
             local ac = bedwars.AbilityController
-            for _, fn in {ac.canUseAbility, ac.useAbility} do
+            -- Direct field scan (Flamework stores state on the object)
+            for _, v in next, ac do
+                if type(v) ~= 'table' then continue end
+                for k in next, v do
+                    if type(k) == 'string' and k:lower():find('repair') and not table.find(found, k) then
+                        table.insert(found, k)
+                    end
+                end
+            end
+            -- Method upvalue scan
+            for _, fn in {ac.canUseAbility, ac.useAbility, ac.getAbilityCooldown, ac.registerAbility} do
                 if type(fn) ~= 'function' then continue end
                 for i = 1, 40 do
                     local ok, _, val = pcall(debug.getupvalue, fn, i)
                     if not ok then break end
                     if type(val) ~= 'table' then continue end
-                    for k in val do
-                        if type(k) == 'string' and k:lower():find('repair') then
+                    for k in next, val do
+                        if type(k) == 'string' and k:lower():find('repair') and not table.find(found, k) then
                             table.insert(found, k)
                         end
                     end
@@ -18264,17 +18284,33 @@ run(function()
         return found
     end
 
+    -- Also check character/player attributes for ability names (like wizard's 'WizardAbility' attr)
+    local function getCharAbilityName()
+        local char = lplr.Character
+        if char then
+            for _, obj in {char, lplr} do
+                for attrName, attrVal in obj:GetAttributes() do
+                    if type(attrVal) == 'string' and attrVal:lower():find('repair') then
+                        return attrVal
+                    end
+                end
+            end
+        end
+        return nil
+    end
+
     local function fireRepair()
         local ac = bedwars.AbilityController
-        -- Merge dynamic discoveries with hardcoded candidates (dynamic first)
         local names = discoverRepairAbilities()
+        local charAbility = getCharAbilityName()
+        if charAbility and not table.find(names, charAbility) then
+            table.insert(names, 1, charAbility)
+        end
         for _, n in ABILITY_NAMES do
             if not table.find(names, n) then table.insert(names, n) end
         end
         for _, name in names do
-            local ok, canUse = pcall(function()
-                return ac:canUseAbility(name)
-            end)
+            local ok, canUse = pcall(function() return ac:canUseAbility(name) end)
             if ok and canUse then
                 pcall(function() ac:useAbility(name) end)
                 return true
@@ -18350,8 +18386,8 @@ run(function()
                 local lastFired = 0
 
                 local frame = Instance.new('Frame')
-                frame.Size = UDim2.fromOffset(108, 20)
-                frame.Position = UDim2.new(0.5, -54, 1, -56)
+                frame.Size = UDim2.fromOffset(160, 20)
+                frame.Position = UDim2.new(0.5, -80, 1, -56)
                 frame.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
                 frame.BackgroundTransparency = 0.2
                 frame.BorderSizePixel = 0
@@ -18428,12 +18464,16 @@ run(function()
                     if cooldownLeft > 0 then
                         setState(math.ceil(cooldownLeft) .. 's', Color3.fromRGB(255, 160, 0))
                     elseif needsRepair then
-                        setState('Repairing...', Color3.fromRGB(80, 220, 80))
                         if fireRepair() then
+                            setState('Repairing...', Color3.fromRGB(80, 220, 80))
                             lastFired = now
+                        else
+                            -- Shows "No ability [N/M]" so user can confirm shield reads correctly
+                            setState('No ability [' .. math.floor(current) .. '/' .. math.floor(maxShield) .. ']', Color3.fromRGB(255, 80, 80))
                         end
                     else
-                        setState('Ready', Color3.fromRGB(100, 200, 255))
+                        -- Shows shield value so user can confirm tracking works
+                        setState('Ready [' .. math.floor(current) .. '/' .. math.floor(maxShield) .. ']', Color3.fromRGB(100, 200, 255))
                     end
 
                 until not HephaestusKit.Enabled
