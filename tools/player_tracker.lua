@@ -16,10 +16,19 @@ local lplr = Players.LocalPlayer
 
 local req = request or (syn and syn.request) or http_request or nil
 
+local function getCookie()
+    local c = ''
+    pcall(function() c = getcookies()['.ROBLOSECURITY'] or '' end)
+    if c ~= '' then return c end
+    pcall(function() c = syn.get_cookie('.ROBLOSECURITY') or '' end)
+    if c ~= '' then return c end
+    pcall(function() c = (getrbxauth and getrbxauth()) or '' end)
+    return c
+end
+
 local function httpPost(url, body)
     if not req then return nil end
-    local cookie = ''
-    pcall(function() cookie = getcookies()['.ROBLOSECURITY'] end)
+    local cookie = getCookie()
     local opts = {
         Url     = url,
         Method  = 'POST',
