@@ -585,8 +585,9 @@ run(function()
         Tooltip = 'Search any player to see if they are in BedWars lobby, which game mode, or offline',
         Function = function(callback)
             if callback then
-                task.defer(function() if PlayerLookup then PlayerLookup:Toggle() end end)
                 openGui()
+            else
+                destroyGui()
             end
         end
     })
