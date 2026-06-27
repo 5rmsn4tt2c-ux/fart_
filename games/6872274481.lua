@@ -9020,15 +9020,26 @@ run(function()
                         end
                     end))
                 end))
-                -- Flatten all character descendants (covers held block regardless of structure)
+                local function getToolBlockColor(inst, char)
+                    local p = inst.Parent
+                    while p and p ~= char do
+                        if blockColors[p.Name] then return blockColors[p.Name] end
+                        p = p.Parent
+                    end
+                    return blockColors[inst.Name]
+                end
                 local function watchChar(char)
                     for _, v in char:GetDescendants() do
-                        if v:IsA('BasePart') then pcall(applyPart, v, nil) end
+                        if v:IsA('BasePart') then
+                            local col = getToolBlockColor(v, char)
+                            if col then pcall(applyPart, v, col) end
+                        end
                     end
                     KingAuto:Clean(char.DescendantAdded:Connect(function(v)
                         if not KingAuto.Enabled then return end
                         if v:IsA('BasePart') then
-                            flattenPart(v, nil)
+                            local col = getToolBlockColor(v, char)
+                            if col then flattenPart(v, col) end
                         elseif (v:IsA('SurfaceAppearance') or v:IsA('Decal') or v:IsA('Texture')) and v.Parent and saved[v.Parent] then
                             local item = hideTexture(v)
                             if item then table.insert(saved[v.Parent].stashed, item) end
