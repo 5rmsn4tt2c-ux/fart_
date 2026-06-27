@@ -9016,6 +9016,33 @@ run(function()
                     if KingAuto.Enabled then watchChar(newChar) end
                 end))
 
+                -- First-person ViewModel lives under Camera, not the character
+                local cam = workspace.CurrentCamera
+                local function flattenCamDescendant(v)
+                    if v:IsA('SurfaceAppearance') or v:IsA('Decal') or v:IsA('Texture') then
+                        pcall(function() v:Destroy() end)
+                    elseif v:IsA('BasePart') then
+                        local col = getToolBlockColor(v, cam)
+                        if col then flattenPart(v, col) end
+                    end
+                end
+                for _, v in cam:GetDescendants() do flattenCamDescendant(v) end
+                KingAuto:Clean(cam.DescendantAdded:Connect(function(v)
+                    if KingAuto.Enabled then flattenCamDescendant(v) end
+                end))
+                -- Client-side placement preview blocks appear outside store.map.Blocks
+                KingAuto:Clean(workspace.DescendantAdded:Connect(function(v)
+                    if not KingAuto.Enabled then return end
+                    if v:IsA('SurfaceAppearance') or v:IsA('Decal') or v:IsA('Texture') then
+                        local anc = v:FindFirstAncestorWhichIsA('Model')
+                        if anc and blockColors[anc.Name] then
+                            pcall(function() v:Destroy() end)
+                        end
+                    elseif v:IsA('Model') and blockColors[v.Name] then
+                        pcall(scanBlock, v, blockColors[v.Name])
+                    end
+                end))
+
                 -- === Grey sky + full bright + no clouds ===
                 for _, p in savedLightProps do
                     origLighting[p] = lightingService[p]
