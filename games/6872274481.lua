@@ -1,5 +1,5 @@
 local canDebug = true
-local VERSION = 6
+local VERSION = 7
 local run = function(func)
 	func()
 end
@@ -18621,7 +18621,10 @@ run(function()
         if pt == 2 then
             local root = p.rootPlaceId
             if root == BEDWARS_LOBBY or root == BEDWARS_GAME then
-                return (p.placeId == BEDWARS_LOBBY) and 'Lobby' or 'In Game'
+                if p.placeId == BEDWARS_LOBBY then return 'Lobby' end
+                local loc = (p.lastLocation or ''):match('^%s*(.-)%s*$')
+                if loc ~= '' and loc:lower() ~= 'bedwars' then return loc end
+                return 'In Game'
             end
             return 'Other Game'
         end

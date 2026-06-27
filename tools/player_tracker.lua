@@ -80,10 +80,13 @@ local function getStatus(name)
     if pt == 2 then
         local root = p.rootPlaceId
         if root == BEDWARS_LOBBY or root == BEDWARS_GAME then
-            local place = p.placeId
-            if place == BEDWARS_LOBBY then return STATUS.LOBBY end
-            if place == BEDWARS_GAME  then return STATUS.INGAME end
-            return STATUS.INGAME  -- any other place in the same universe = in a game
+            if p.placeId == BEDWARS_LOBBY then return STATUS.LOBBY end
+            -- In a Bedwars game — use lastLocation for exact mode (Ranked, Squads, etc.)
+            local loc = (p.lastLocation or ''):match('^%s*(.-)%s*$')
+            if loc ~= '' and loc:lower() ~= 'bedwars' then
+                return { text = loc, color = STATUS.INGAME.color }
+            end
+            return STATUS.INGAME
         end
         return STATUS.OTHER
     end
@@ -336,11 +339,15 @@ task.spawn(function()
 
             local prev = lastStatuses[name]
             if prev and prev ~= s.text then
+                local wasInGame = prev ~= 'Offline' and prev ~= 'Online' and prev ~= 'Lobby' and prev ~= 'Other Game' and prev ~= 'Error'
+                local nowInGame = s.text ~= 'Offline' and s.text ~= 'Online' and s.text ~= 'Lobby' and s.text ~= 'Other Game' and s.text ~= 'Error'
                 local msg
-                if s.text == 'In Game' then
-                    msg = name .. ' joined a game!'
-                elseif s.text == 'Lobby' and prev == 'In Game' then
-                    msg = name .. ' is back in Lobby'
+                if s.text == 'Lobby' and prev ~= 'Lobby' then
+                    msg = name .. ' is in Lobby'
+                elseif nowInGame and not wasInGame then
+                    msg = name .. ' joined ' .. s.text
+                elseif nowInGame and wasInGame then
+                    msg = name .. ' → ' .. s.text  -- mode switched
                 elseif s.text == 'Offline' and prev ~= 'Offline' then
                     msg = name .. ' went offline'
                 end
