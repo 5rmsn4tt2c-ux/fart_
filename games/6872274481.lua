@@ -9126,42 +9126,33 @@ run(function()
         Function = function(callback)
             if callback then
                 for _, p in gsProps do gsOrig[p] = lightingService[p] end
-                -- Replace sky cubemap faces with a blank neutral asset (no blue)
-                local existingSky = lightingService:FindFirstChildOfClass('Sky')
-                if existingSky then
-                    greyifySky(existingSky)
-                else
-                    local sky = Instance.new('Sky')
-                    sky.Parent = lightingService
-                    greyifySky(sky)
-                    table.insert(gsAdded, sky)
-                end
-                -- Remove existing Atmosphere/effects
+                -- Remove Sky and effects — high ambient lights the skyless dome grey
                 for _, child in lightingService:GetChildren() do
-                    if child:IsA('Atmosphere') or child:IsA('BloomEffect') or child:IsA('SunRaysEffect') then
+                    if child:IsA('Sky') or child:IsA('Atmosphere')
+                       or child:IsA('BloomEffect') or child:IsA('SunRaysEffect') then
                         child.Parent = gsStash
                     end
                 end
-                -- Grey haze atmosphere — tints the blank sky dome grey
                 local atmo = Instance.new('Atmosphere')
-                atmo.Density = 0.8
-                atmo.Color   = Color3.fromRGB(115, 115, 115)
-                atmo.Decay   = Color3.fromRGB(95, 95, 95)
+                atmo.Density = 0.85
+                atmo.Color   = Color3.fromRGB(145, 145, 145)
+                atmo.Decay   = Color3.fromRGB(125, 125, 125)
                 atmo.Glare   = 0
-                atmo.Haze    = 6
+                atmo.Haze    = 0
                 atmo.Offset  = 0
                 atmo.Parent  = lightingService
                 table.insert(gsAdded, atmo)
+                -- High Brightness + Ambient = bright grey procedural sky (same as working King Auto)
+                lightingService.Ambient              = Color3.fromRGB(180, 180, 180)
+                lightingService.OutdoorAmbient       = Color3.fromRGB(160, 160, 160)
+                lightingService.Brightness           = 5
+                lightingService.ExposureCompensation = 0
                 lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                 lightingService.FogEnd               = 1200
-                lightingService.FogStart             = 400
-                lightingService.Ambient              = Color3.fromRGB(130, 130, 130)
-                lightingService.OutdoorAmbient       = Color3.fromRGB(110, 110, 110)
-                lightingService.Brightness           = 2
-                lightingService.ExposureCompensation = -0.2
-                -- If game swaps in a new Sky, blank it out too
+                lightingService.FogStart             = 600
+                -- If game re-adds a Sky, blank its faces so blue doesn't show through
                 GreySky:Clean(lightingService.ChildAdded:Connect(function(child)
-                    if child:IsA('Sky') and not table.find(gsAdded, child) then
+                    if child:IsA('Sky') then
                         greyifySky(child)
                     elseif (child:IsA('Atmosphere') or child:IsA('BloomEffect') or child:IsA('SunRaysEffect'))
                        and not table.find(gsAdded, child) then
@@ -9170,22 +9161,22 @@ run(function()
                 end))
                 GreySky:Clean(lightingService.Changed:Connect(function(prop)
                     if gsChanged then return end
-                    if prop == 'FogColor' or prop == 'FogEnd' or prop == 'FogStart' or
-                       prop == 'Ambient' or prop == 'OutdoorAmbient' or prop == 'Brightness' or
-                       prop == 'ExposureCompensation' then
+                    if prop == 'Ambient' or prop == 'OutdoorAmbient' or prop == 'Brightness' or
+                       prop == 'ExposureCompensation' or prop == 'FogColor' or
+                       prop == 'FogEnd' or prop == 'FogStart' then
                         gsChanged = true
+                        lightingService.Ambient              = Color3.fromRGB(180, 180, 180)
+                        lightingService.OutdoorAmbient       = Color3.fromRGB(160, 160, 160)
+                        lightingService.Brightness           = 5
+                        lightingService.ExposureCompensation = 0
                         lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                         lightingService.FogEnd               = 1200
-                        lightingService.FogStart             = 400
-                        lightingService.Ambient              = Color3.fromRGB(130, 130, 130)
-                        lightingService.OutdoorAmbient       = Color3.fromRGB(110, 110, 110)
-                        lightingService.Brightness           = 2
-                        lightingService.ExposureCompensation = -0.2
+                        lightingService.FogStart             = 600
                         gsChanged = false
                     end
                 end))
             else
-                -- Restore sky textures
+                -- Restore sky textures on any Sky that got greyified
                 for _, child in lightingService:GetChildren() do
                     if child:IsA('Sky') then restoreSky(child) end
                 end
