@@ -9097,18 +9097,36 @@ run(function()
     local gsOrig = {}
     local gsProps = {'FogColor', 'FogEnd', 'FogStart', 'Ambient', 'OutdoorAmbient', 'Brightness', 'ExposureCompensation'}
     local gsSkyFaces = {'SkyboxBk', 'SkyboxDn', 'SkyboxFt', 'SkyboxLf', 'SkyboxRt', 'SkyboxUp'}
-    local BLANK_SKY = 'rbxassetid://2675785344'  -- neutral blank skybox face
-    local gsSkyOrig = {}  -- {[sky] = {prop = originalValue}}
+    local BLANK_SKY = 'rbxassetid://2675785344'
+    local gsSkyOrig = {}
+    local skyChanging = {}
     local gsChanged = false
 
-    local function greyifySky(sky)
+    local function saveSkyOrig(sky)
         if gsSkyOrig[sky] then return end
         local orig = { StarCount = sky.StarCount, CelestialBodiesShown = sky.CelestialBodiesShown }
         for _, p in gsSkyFaces do orig[p] = sky[p] end
         gsSkyOrig[sky] = orig
+    end
+
+    local function blankSky(sky)
+        skyChanging[sky] = true
         for _, p in gsSkyFaces do pcall(function() sky[p] = BLANK_SKY end) end
         pcall(function() sky.StarCount = 0 end)
         pcall(function() sky.CelestialBodiesShown = false end)
+        skyChanging[sky] = false
+    end
+
+    local function watchSky(sky)
+        saveSkyOrig(sky)
+        blankSky(sky)
+        -- re-blank whenever the game overwrites our sky faces
+        GreySky:Clean(sky.Changed:Connect(function(prop)
+            if skyChanging[sky] then return end
+            if table.find(gsSkyFaces, prop) or prop == 'CelestialBodiesShown' or prop == 'StarCount' then
+                blankSky(sky)
+            end
+        end))
     end
 
     local function restoreSky(sky)
@@ -9118,6 +9136,7 @@ run(function()
         pcall(function() sky.StarCount = orig.StarCount end)
         pcall(function() sky.CelestialBodiesShown = orig.CelestialBodiesShown end)
         gsSkyOrig[sky] = nil
+        skyChanging[sky] = nil
     end
 
     GreySky = vape.Categories.Render:CreateModule({
@@ -9126,10 +9145,20 @@ run(function()
         Function = function(callback)
             if callback then
                 for _, p in gsProps do gsOrig[p] = lightingService[p] end
-                -- Remove Sky and effects — high ambient lights the skyless dome grey
+                -- Keep Sky in Lighting but blank its faces (don't remove — game re-adds with blue textures)
+                local existingSky = lightingService:FindFirstChildOfClass('Sky')
+                if existingSky then
+                    watchSky(existingSky)
+                else
+                    local sky = Instance.new('Sky')
+                    sky.Parent = lightingService
+                    watchSky(sky)
+                    table.insert(gsAdded, sky)
+                end
+                -- Stash Atmosphere and post-processing effects
                 for _, child in lightingService:GetChildren() do
-                    if child:IsA('Sky') or child:IsA('Atmosphere')
-                       or child:IsA('BloomEffect') or child:IsA('SunRaysEffect') then
+                    if (child:IsA('Atmosphere') or child:IsA('BloomEffect') or child:IsA('SunRaysEffect'))
+                       and not table.find(gsAdded, child) then
                         child.Parent = gsStash
                     end
                 end
@@ -9142,7 +9171,7 @@ run(function()
                 atmo.Offset  = 0
                 atmo.Parent  = lightingService
                 table.insert(gsAdded, atmo)
-                -- High Brightness + Ambient = bright grey procedural sky (same as working King Auto)
+                -- High Brightness + Ambient lifts the blank sky asset from black to grey
                 lightingService.Ambient              = Color3.fromRGB(180, 180, 180)
                 lightingService.OutdoorAmbient       = Color3.fromRGB(160, 160, 160)
                 lightingService.Brightness           = 5
@@ -9150,10 +9179,9 @@ run(function()
                 lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                 lightingService.FogEnd               = 1200
                 lightingService.FogStart             = 600
-                -- If game re-adds a Sky, blank its faces so blue doesn't show through
                 GreySky:Clean(lightingService.ChildAdded:Connect(function(child)
-                    if child:IsA('Sky') then
-                        greyifySky(child)
+                    if child:IsA('Sky') and not table.find(gsAdded, child) then
+                        watchSky(child)
                     elseif (child:IsA('Atmosphere') or child:IsA('BloomEffect') or child:IsA('SunRaysEffect'))
                        and not table.find(gsAdded, child) then
                         child.Parent = gsStash
@@ -9176,12 +9204,12 @@ run(function()
                     end
                 end))
             else
-                -- Restore sky textures on any Sky that got greyified
                 for _, child in lightingService:GetChildren() do
                     if child:IsA('Sky') then restoreSky(child) end
                 end
                 for sky in gsSkyOrig do restoreSky(sky) end
                 table.clear(gsSkyOrig)
+                table.clear(skyChanging)
                 for _, v in gsAdded do v:Destroy() end
                 table.clear(gsAdded)
                 for _, child in gsStash:GetChildren() do child.Parent = lightingService end
