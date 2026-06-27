@@ -88,7 +88,8 @@ local function getStatus(name)
             end
             return STATUS.INGAME
         end
-        return STATUS.OTHER
+        -- Show raw rootPlaceId so we can identify the correct Bedwars place IDs
+        return { text = 'root:' .. tostring(root), color = STATUS.OTHER.color }
     end
     return STATUS.ERROR
 end
