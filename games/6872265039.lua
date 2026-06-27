@@ -228,19 +228,22 @@ run(function()
         local scroll = img:FindFirstChild('AutoCanvasScrollingFrame')
         if not scroll then return nil end
         for _, row in scroll:GetChildren() do
-            if row.Name ~= 'PlayerRow' then continue end
-            local nc = row:FindFirstChild('PlayerNameContainer')
-            if not nc then continue end
-            local nf = nc:FindFirstChild('2')
-            if not nf then continue end
-            local ul = nf:FindFirstChild('3')
-            if ul and ul:IsA('TextLabel') and ul.Text:gsub('^@',''):lower() == username:lower() then
-                local sf = nc:FindFirstChild('3')
-                if sf then
-                    local sl = sf:FindFirstChild('2')
-                    return (sl and sl.Text) or ''
+            if row.Name == 'PlayerRow' then
+                local nc = row:FindFirstChild('PlayerNameContainer')
+                if nc then
+                    local nf = nc:FindFirstChild('2')
+                    if nf then
+                        local ul = nf:FindFirstChild('3')
+                        if ul and ul:IsA('TextLabel') and ul.Text:gsub('^@',''):lower() == username:lower() then
+                            local sf = nc:FindFirstChild('3')
+                            if sf then
+                                local sl = sf:FindFirstChild('2')
+                                return (sl and sl.Text) or ''
+                            end
+                            return ''
+                        end
+                    end
                 end
-                return ''
             end
         end
         return nil
