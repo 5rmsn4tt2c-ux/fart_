@@ -9106,7 +9106,7 @@ run(function()
         local orig = { StarCount = sky.StarCount, CelestialBodiesShown = sky.CelestialBodiesShown }
         for _, p in gsSkyFaces do orig[p] = sky[p] end
         gsSkyOrig[sky] = orig
-        for _, p in gsSkyFaces do pcall(function() sky[p] = 'rbxassetid://0' end) end
+        for _, p in gsSkyFaces do pcall(function() sky[p] = '' end) end
         pcall(function() sky.StarCount = 0 end)
         pcall(function() sky.CelestialBodiesShown = false end)
     end
@@ -9143,10 +9143,10 @@ run(function()
                 -- Add grey Atmosphere
                 local atmo = Instance.new('Atmosphere')
                 atmo.Density      = 1
-                atmo.Color        = Color3.fromRGB(128, 128, 128)
-                atmo.Decay        = Color3.fromRGB(100, 100, 100)
+                atmo.Color        = Color3.fromRGB(110, 110, 110)
+                atmo.Decay        = Color3.fromRGB(90, 90, 90)
                 atmo.Glare        = 0
-                atmo.Haze         = 0
+                atmo.Haze         = 10
                 atmo.Offset       = 0
                 atmo.Parent       = lightingService
                 table.insert(gsAdded, atmo)
