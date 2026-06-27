@@ -8990,10 +8990,10 @@ run(function()
                         clouds.Enabled = false
                     end
                 end
-                lightingService.Ambient              = Color3.fromRGB(180, 180, 180)
-                lightingService.OutdoorAmbient       = Color3.fromRGB(160, 160, 160)
-                lightingService.Brightness           = 5
-                lightingService.ExposureCompensation = 0
+                lightingService.Ambient              = Color3.fromRGB(120, 120, 120)
+                lightingService.OutdoorAmbient       = Color3.fromRGB(100, 100, 100)
+                lightingService.Brightness           = 2
+                lightingService.ExposureCompensation = -0.3
                 lightingService.GlobalShadows        = false
                 lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                 lightingService.FogEnd               = 1200
@@ -9022,10 +9022,10 @@ run(function()
                        prop == 'Ambient' or prop == 'OutdoorAmbient' or prop == 'Brightness' or
                        prop == 'ExposureCompensation' or prop == 'GlobalShadows' then
                         lightChanged = true
-                        lightingService.Ambient              = Color3.fromRGB(180, 180, 180)
-                        lightingService.OutdoorAmbient       = Color3.fromRGB(160, 160, 160)
-                        lightingService.Brightness           = 5
-                        lightingService.ExposureCompensation = 0
+                        lightingService.Ambient              = Color3.fromRGB(120, 120, 120)
+                        lightingService.OutdoorAmbient       = Color3.fromRGB(100, 100, 100)
+                        lightingService.Brightness           = 2
+                        lightingService.ExposureCompensation = -0.3
                         lightingService.GlobalShadows        = false
                         lightingService.FogColor             = Color3.fromRGB(140, 140, 140)
                         lightingService.FogEnd               = 1200
