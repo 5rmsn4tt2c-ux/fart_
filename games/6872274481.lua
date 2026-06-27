@@ -9088,6 +9088,76 @@ run(function()
     })
 end)
 
+run(function()
+    local GreySky
+    local gsStash = Instance.new('Folder')
+    gsStash.Name = 'GreySkyStash'
+    gsStash.Parent = vape.gui
+    local gsAdded = {}
+    local gsOrig = {}
+    local gsProps = {'FogColor', 'FogEnd', 'FogStart', 'Ambient', 'OutdoorAmbient', 'Brightness'}
+    local gsChanged = false
+
+    local function applyGreySky()
+        for _, p in gsProps do gsOrig[p] = lightingService[p] end
+        for _, child in lightingService:GetChildren() do
+            if child:IsA('Sky') or child:IsA('Atmosphere') then
+                child.Parent = gsStash
+            end
+        end
+        local atmo = Instance.new('Atmosphere')
+        atmo.Density      = 1
+        atmo.Color        = Color3.fromRGB(128, 128, 128)
+        atmo.Decay        = Color3.fromRGB(100, 100, 100)
+        atmo.Glare        = 0
+        atmo.Haze         = 0
+        atmo.Offset       = 0
+        atmo.Parent       = lightingService
+        table.insert(gsAdded, atmo)
+        lightingService.FogColor        = Color3.fromRGB(128, 128, 128)
+        lightingService.FogEnd          = 900
+        lightingService.FogStart        = 0
+        lightingService.Ambient         = Color3.fromRGB(128, 128, 128)
+        lightingService.OutdoorAmbient  = Color3.fromRGB(100, 100, 100)
+        lightingService.Brightness      = 1
+        GreySky:Clean(lightingService.ChildAdded:Connect(function(child)
+            if child:IsA('Sky') or (child:IsA('Atmosphere') and not table.find(gsAdded, child)) then
+                child.Parent = gsStash
+            end
+        end))
+        GreySky:Clean(lightingService.Changed:Connect(function(prop)
+            if gsChanged then return end
+            if prop == 'FogColor' or prop == 'FogEnd' or prop == 'FogStart' or
+               prop == 'Ambient' or prop == 'OutdoorAmbient' or prop == 'Brightness' then
+                gsChanged = true
+                lightingService.FogColor        = Color3.fromRGB(128, 128, 128)
+                lightingService.FogEnd          = 900
+                lightingService.FogStart        = 0
+                lightingService.Ambient         = Color3.fromRGB(128, 128, 128)
+                lightingService.OutdoorAmbient  = Color3.fromRGB(100, 100, 100)
+                lightingService.Brightness      = 1
+                gsChanged = false
+            end
+        end))
+    end
+
+    GreySky = vape.Categories.Render:CreateModule({
+        Name = 'Grey Sky',
+        Tooltip = 'Flat grey sky (replicates FFlagDebugSkyGray)',
+        Function = function(callback)
+            if callback then
+                applyGreySky()
+            else
+                for _, v in gsAdded do v:Destroy() end
+                table.clear(gsAdded)
+                for _, child in gsStash:GetChildren() do child.Parent = lightingService end
+                for _, p in gsProps do lightingService[p] = gsOrig[p] end
+                table.clear(gsOrig)
+            end
+        end,
+    })
+end)
+
 --[[
     Utility
 ]]
