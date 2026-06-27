@@ -9101,8 +9101,10 @@ run(function()
         Tooltip = 'Instantly resets your character',
         Function = function(callback)
             if callback then
-                lplr:LoadCharacter()
-                AutoReset:Toggle(false)
+                if entitylib.character and entitylib.character.Humanoid then
+                    entitylib.character.Humanoid.Health = 0
+                end
+                AutoReset:Toggle()
             end
         end,
     })
