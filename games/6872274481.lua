@@ -21907,26 +21907,26 @@ run(function()
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-    local function handlePingInput()
-        if strikeActive then return end
-        if not entitylib.isAlive then return end
-
-        -- build exclusion list: don't hit our own character or other transparent parts
+    -- Raycast from a 2D screen position to a world position
+    local function screenToWorld(screenPos)
+        local unitRay = gameCamera:ScreenPointToRay(screenPos.X, screenPos.Y)
         rayParams.FilterDescendantsInstances = { lplr.Character or game }
+        local ray = workspace:Raycast(unitRay.Origin, unitRay.Direction * 600, rayParams)
+        return ray and ray.Position or nil
+    end
 
-        local ray = workspace:Raycast(
-            gameCamera.CFrame.Position,
-            gameCamera.CFrame.LookVector * 600,
-            rayParams
-        )
-        if not ray then return end
+    -- Raycast from camera centre (PC / gamepad)
+    local function centreToWorld()
+        rayParams.FilterDescendantsInstances = { lplr.Character or game }
+        local ray = workspace:Raycast(gameCamera.CFrame.Position, gameCamera.CFrame.LookVector * 600, rayParams)
+        return ray and ray.Position or nil
+    end
 
-        local targetPos = ray.Position
+    local function fireStrike(targetPos)
+        if not targetPos then return end
         strikeActive = true
-
         local marker = createTargetMarker(targetPos)
         local lockTime = LockTime.Value + lplr:GetNetworkPing()
-
         showStrikeUI(lockTime, function()
             destroyMarker(marker)
             if not strikeActive then return end
@@ -21951,30 +21951,42 @@ run(function()
                     hookSleighVisibility(HideSleigh.Enabled)
                 end))
 
-                OrbitalStrike:Clean(inputService.InputBegan:Connect(function(input, gpe)
-                    if gpe then return end
-                    local keyName = TriggerKey.Value
-                    local isKey = pcall(function()
-                        return input.KeyCode == Enum.KeyCode[keyName]
-                    end)
-                    if isKey and input.KeyCode == Enum.KeyCode[keyName] then
-                        handlePingInput()
-                    end
-                end))
+                if inputService.TouchEnabled then
+                    -- Mobile: tap anywhere on screen → raycast that touch point → strike
+                    OrbitalStrike:Clean(inputService.TouchTap:Connect(function(touchPositions, gpe)
+                        if gpe or strikeActive or not entitylib.isAlive then return end
+                        -- use the first finger's position
+                        local pos = touchPositions[1]
+                        if not pos then return end
+                        local worldPos = screenToWorld(pos)
+                        fireStrike(worldPos)
+                    end))
+                else
+                    -- PC / gamepad: press the configured key → raycast camera centre → strike
+                    OrbitalStrike:Clean(inputService.InputBegan:Connect(function(input, gpe)
+                        if gpe or strikeActive or not entitylib.isAlive then return end
+                        local ok, matches = pcall(function()
+                            return input.KeyCode == Enum.KeyCode[TriggerKey.Value]
+                        end)
+                        if ok and matches then
+                            fireStrike(centreToWorld())
+                        end
+                    end))
+                end
             else
                 strikeActive = false
                 destroyUI()
                 hookSleighVisibility(false)
             end
         end,
-        Tooltip = 'Multi-wave orbital TNT bombardment at cursor. Press key to call in the strike.',
+        Tooltip = 'Mobile: tap where you want the strike. PC: press the Ping Key while looking at the target.',
     })
 
     TriggerKey = OrbitalStrike:CreateDropdown({
-        Name = 'Ping Key',
+        Name = 'Ping Key (PC)',
         List = { 'G', 'H', 'J', 'Z', 'X', 'V', 'F', 'T', 'B', 'N' },
         Default = 'G',
-        Tooltip = 'Key to use when pinging a strike location',
+        Tooltip = 'PC only — key that fires the strike at your crosshair position',
     })
     LockTime = OrbitalStrike:CreateSlider({
         Name = 'Lock-on Delay',
