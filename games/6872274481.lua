@@ -11679,6 +11679,9 @@ run(function()
                 return
             end
             task.spawn(function()
+                local okRD, RD = pcall(function()
+                    return require(replicatedStorage.TS.rank['rank-distribution']).RankDistribution
+                end)
                 for _, username in list do
                     local ok, userId = pcall(game.Players.GetUserIdFromNameAsync, game.Players, username)
                     if not ok or not userId then
@@ -11696,211 +11699,17 @@ run(function()
                     local meta = division and bedwars.RankMeta[division]
                     local rankName = meta and meta.name or ('Division ' .. tostring(division))
                     local shortName = meta and meta.shortName
+                    local rpFloor = nil
+                    if okRD and RD and division then
+                        local ok3, rp = pcall(function() return RD.getRankPointsFromDivision(RD, division) end)
+                        if ok3 and type(rp) == 'number' then rpFloor = rp end
+                    end
                     local display = rankName .. (shortName and ' (' .. shortName .. ')' or '')
+                    if rpFloor then
+                        display = display .. ' | ' .. tostring(rpFloor) .. '+ RP'
+                    end
                     notif('Rank Lookup', username .. ' — ' .. display, 8, 'info')
                 end
-            end)
-        end
-    })
-
-    RankLookup:CreateButton({
-        Name = 'DEBUG Find RP 2',
-        Tooltip = 'Targeted deep dive into Leaderboard/rankStats and RankDistribution',
-        Function = function()
-            task.spawn(function()
-                local lines = {}
-                local function log(s) table.insert(lines, tostring(s)) end
-
-                local function dumpTable(t, prefix, depth)
-                    if depth > 3 then return end
-                    for k, v in pairs(t) do
-                        local key = prefix .. '[' .. tostring(k) .. ']'
-                        if type(v) == 'table' then
-                            log(key .. ' (table)')
-                            dumpTable(v, key, depth + 1)
-                        else
-                            log(key .. ' = ' .. tostring(v) .. ' (' .. type(v) .. ')')
-                        end
-                    end
-                end
-
-                -- 1. Deep dump all of Store.Leaderboard
-                log('=== Store.Leaderboard deep dump ===')
-                local state = bedwars.Store:getState()
-                if state.Leaderboard then
-                    dumpTable(state.Leaderboard, 'Leaderboard', 0)
-                end
-
-                -- 2. RankDistribution functions
-                log('=== RankDistribution ===')
-                local ok, RD = pcall(function()
-                    return require(replicatedStorage.TS.rank['rank-distribution']).RankDistribution
-                end)
-                if ok and RD then
-                    local ok2, rp = pcall(function() return RD.getRankPointsFromDivision(RD, 20) end)
-                    log('getRankPointsFromDivision(20): ok=' .. tostring(ok2) .. ' = ' .. tostring(rp))
-                    if type(rp) == 'table' then dumpTable(rp, '  rp', 0) end
-
-                    local ok3, dr = pcall(function() return RD.getDisplayedRank(RD) end)
-                    log('getDisplayedRank(): ok=' .. tostring(ok3) .. ' = ' .. tostring(dr))
-                    if type(dr) == 'table' then dumpTable(dr, '  dr', 0) end
-
-                    log('NIGHTMARE_USER_LIMIT=' .. tostring(RD.NIGHTMARE_USER_LIMIT))
-                else
-                    log('RD load failed: ' .. tostring(RD))
-                end
-
-                -- 3. GlickoRatings rating table structure
-                log('=== GlickoRatings ===')
-                local ok4, GR = pcall(function()
-                    return require(replicatedStorage.TS.rank['glicko-rating-tables']).GlickoRatings
-                end)
-                if ok4 and GR then
-                    local ok5, rt = pcall(function() return GR.getRatingTable(GR) end)
-                    log('getRatingTable ok=' .. tostring(ok5) .. ' type=' .. type(rt))
-                    if ok5 and type(rt) == 'table' then
-                        local count = 0
-                        for k, v in pairs(rt) do
-                            count += 1
-                            if count <= 5 then
-                                log('  [' .. tostring(k) .. '] type=' .. type(v))
-                                if type(v) == 'table' then
-                                    for k2, v2 in pairs(v) do log('    .' .. tostring(k2) .. '=' .. tostring(v2)) end
-                                end
-                            end
-                        end
-                        log('  total entries: ' .. count)
-                    end
-                    if type(GR.currentGlickoRatingTable) == 'table' then
-                        log('currentGlickoRatingTable sample:')
-                        local count = 0
-                        for k, v in pairs(GR.currentGlickoRatingTable) do
-                            count += 1
-                            if count <= 5 then
-                                log('  [' .. tostring(k) .. '] type=' .. type(v))
-                                if type(v) == 'table' then
-                                    for k2, v2 in pairs(v) do log('    .' .. tostring(k2) .. '=' .. tostring(v2)) end
-                                end
-                            end
-                        end
-                        log('  total: ' .. count)
-                    end
-                else
-                    log('GR load failed: ' .. tostring(GR))
-                end
-
-                -- 4. rank-decay-util
-                log('=== rank-decay-util ===')
-                local ok6, getRankDecayData = pcall(function()
-                    return require(replicatedStorage.TS.rank['rank-decay-util']).getRankDecayData
-                end)
-                if ok6 then
-                    local ok7, decayData = pcall(getRankDecayData)
-                    log('getRankDecayData ok=' .. tostring(ok7) .. ' type=' .. type(decayData))
-                    if ok7 and type(decayData) == 'table' then
-                        dumpTable(decayData, '  decay', 0)
-                    else
-                        log('  result: ' .. tostring(decayData))
-                    end
-                end
-
-                setclipboard(table.concat(lines, '\n'))
-                notif('Rank Lookup', 'DEBUG 2 done — paste and send!', 5, 'info')
-            end)
-        end
-    })
-
-    RankLookup:CreateButton({
-        Name = 'DEBUG Find RP',
-        Tooltip = 'Collects all RP data sources and copies result to clipboard',
-        Function = function()
-            task.spawn(function()
-                local lines = {}
-                local function log(s) table.insert(lines, tostring(s)) end
-
-                -- 1. Full FetchRanks response for own account
-                log('=== FetchRanks self ===')
-                local ok, result = pcall(function()
-                    return bedwars.Client:Get('FetchRanks'):CallServer({lplr.UserId})
-                end)
-                log('ok=' .. tostring(ok))
-                if ok and typeof(result) == 'table' then
-                    log('#result=' .. #result)
-                    for i, entry in ipairs(result) do
-                        for k, v in pairs(entry) do
-                            log('result[' .. i .. '].' .. tostring(k) .. ' = ' .. tostring(v) .. ' (' .. typeof(v) .. ')')
-                        end
-                    end
-                else
-                    log('result=' .. tostring(result))
-                end
-
-                -- 2. Store state (top level + sub-tables one level deep)
-                log('=== Store state ===')
-                local state = bedwars.Store:getState()
-                for k, v in pairs(state) do
-                    log('Store.' .. tostring(k) .. ' (' .. typeof(v) .. ')')
-                    if typeof(v) == 'table' then
-                        for k2, v2 in pairs(v) do
-                            log('  .' .. tostring(k2) .. ' = ' .. tostring(v2))
-                        end
-                    end
-                end
-
-                -- 3. lplr attributes
-                log('=== lplr attributes ===')
-                for k, v in pairs(lplr:GetAttributes()) do
-                    log('attr.' .. tostring(k) .. ' = ' .. tostring(v))
-                end
-
-                -- 4. All modules in replicatedStorage.TS.rank
-                log('=== TS.rank modules ===')
-                local ok2, rankFolder = pcall(function() return replicatedStorage.TS.rank end)
-                if ok2 and rankFolder then
-                    for _, child in rankFolder:GetChildren() do
-                        log('module: ' .. child.Name)
-                        local ok3, mod = pcall(require, child)
-                        if ok3 and type(mod) == 'table' then
-                            for k, v in pairs(mod) do
-                                log('  .' .. tostring(k) .. ' (' .. type(v) .. ')')
-                                if type(v) == 'table' then
-                                    for k2, v2 in pairs(v) do
-                                        log('    .' .. tostring(k2) .. ' = ' .. tostring(v2))
-                                    end
-                                end
-                            end
-                        else
-                            log('  require failed: ' .. tostring(mod))
-                        end
-                    end
-                end
-
-                -- 5. Alternative remote probes
-                log('=== remote probes ===')
-                for _, name in {'FetchRankRP', 'GetRankPoints', 'FetchPlayerStats', 'GetRankedData', 'FetchRankedData', 'GetPlayerRank', 'RankedStats', 'GetRankInfo', 'FetchRankData'} do
-                    local ok4, res = pcall(function()
-                        return bedwars.Client:Get(name):CallServer({lplr.UserId})
-                    end)
-                    log('Remote "' .. name .. '" ok=' .. tostring(ok4) .. ' -> ' .. tostring(res))
-                end
-
-                -- 6. bedwars table rank/rp/rating keys
-                log('=== bedwars rank keys ===')
-                for k, v in pairs(bedwars) do
-                    local lk = string.lower(tostring(k))
-                    if lk:find('rank') or lk:find('%brp%b') or lk:find('rating') or lk:find('point') then
-                        log('bedwars.' .. tostring(k) .. ' (' .. typeof(v) .. ')')
-                        if typeof(v) == 'table' then
-                            for k2, v2 in pairs(v) do
-                                log('  .' .. tostring(k2) .. ' (' .. typeof(v2) .. ')')
-                            end
-                        end
-                    end
-                end
-
-                local output = table.concat(lines, '\n')
-                setclipboard(output)
-                notif('Rank Lookup', 'Copied to clipboard! Paste it and send to dev', 5, 'info')
             end)
         end
     })
