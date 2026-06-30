@@ -22585,11 +22585,11 @@ run(function()
         Function = function()
             if not entitylib.isAlive then return end
             local hand = store.hand
-            if not hand or not hand.Type then
+            if not hand or not hand.tool then
                 notif('ForceDrop', 'No item in hand', 3, 'alert')
                 return
             end
-            local item = getItem(hand.Type)
+            local item = getItem(hand.tool.Name)
             if not item then return end
             local dropped = forceDrop(item)
             if dropped then
