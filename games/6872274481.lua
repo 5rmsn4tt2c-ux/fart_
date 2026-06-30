@@ -9164,12 +9164,6 @@ run(function()
         Default = 2,
         Tooltip = 'Controls how bright the grey sky looks',
     })
-    task.defer(function()
-        local ok, val = pcall(getfflag, 'DFFlagKingAuto')
-        if ok and (val == 'True' or val == 'true') then
-            KingAuto:Toggle(true)
-        end
-    end)
 end)
 
 run(function()
