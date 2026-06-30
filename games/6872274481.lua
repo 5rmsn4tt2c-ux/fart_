@@ -11704,6 +11704,113 @@ run(function()
     })
 
     RankLookup:CreateButton({
+        Name = 'DEBUG Find RP 2',
+        Tooltip = 'Targeted deep dive into Leaderboard/rankStats and RankDistribution',
+        Function = function()
+            task.spawn(function()
+                local lines = {}
+                local function log(s) table.insert(lines, tostring(s)) end
+
+                local function dumpTable(t, prefix, depth)
+                    if depth > 3 then return end
+                    for k, v in pairs(t) do
+                        local key = prefix .. '[' .. tostring(k) .. ']'
+                        if type(v) == 'table' then
+                            log(key .. ' (table)')
+                            dumpTable(v, key, depth + 1)
+                        else
+                            log(key .. ' = ' .. tostring(v) .. ' (' .. type(v) .. ')')
+                        end
+                    end
+                end
+
+                -- 1. Deep dump all of Store.Leaderboard
+                log('=== Store.Leaderboard deep dump ===')
+                local state = bedwars.Store:getState()
+                if state.Leaderboard then
+                    dumpTable(state.Leaderboard, 'Leaderboard', 0)
+                end
+
+                -- 2. RankDistribution functions
+                log('=== RankDistribution ===')
+                local ok, RD = pcall(function()
+                    return require(replicatedStorage.TS.rank['rank-distribution']).RankDistribution
+                end)
+                if ok and RD then
+                    local ok2, rp = pcall(function() return RD.getRankPointsFromDivision(RD, 20) end)
+                    log('getRankPointsFromDivision(20): ok=' .. tostring(ok2) .. ' = ' .. tostring(rp))
+                    if type(rp) == 'table' then dumpTable(rp, '  rp', 0) end
+
+                    local ok3, dr = pcall(function() return RD.getDisplayedRank(RD) end)
+                    log('getDisplayedRank(): ok=' .. tostring(ok3) .. ' = ' .. tostring(dr))
+                    if type(dr) == 'table' then dumpTable(dr, '  dr', 0) end
+
+                    log('NIGHTMARE_USER_LIMIT=' .. tostring(RD.NIGHTMARE_USER_LIMIT))
+                else
+                    log('RD load failed: ' .. tostring(RD))
+                end
+
+                -- 3. GlickoRatings rating table structure
+                log('=== GlickoRatings ===')
+                local ok4, GR = pcall(function()
+                    return require(replicatedStorage.TS.rank['glicko-rating-tables']).GlickoRatings
+                end)
+                if ok4 and GR then
+                    local ok5, rt = pcall(function() return GR.getRatingTable(GR) end)
+                    log('getRatingTable ok=' .. tostring(ok5) .. ' type=' .. type(rt))
+                    if ok5 and type(rt) == 'table' then
+                        local count = 0
+                        for k, v in pairs(rt) do
+                            count += 1
+                            if count <= 5 then
+                                log('  [' .. tostring(k) .. '] type=' .. type(v))
+                                if type(v) == 'table' then
+                                    for k2, v2 in pairs(v) do log('    .' .. tostring(k2) .. '=' .. tostring(v2)) end
+                                end
+                            end
+                        end
+                        log('  total entries: ' .. count)
+                    end
+                    if type(GR.currentGlickoRatingTable) == 'table' then
+                        log('currentGlickoRatingTable sample:')
+                        local count = 0
+                        for k, v in pairs(GR.currentGlickoRatingTable) do
+                            count += 1
+                            if count <= 5 then
+                                log('  [' .. tostring(k) .. '] type=' .. type(v))
+                                if type(v) == 'table' then
+                                    for k2, v2 in pairs(v) do log('    .' .. tostring(k2) .. '=' .. tostring(v2)) end
+                                end
+                            end
+                        end
+                        log('  total: ' .. count)
+                    end
+                else
+                    log('GR load failed: ' .. tostring(GR))
+                end
+
+                -- 4. rank-decay-util
+                log('=== rank-decay-util ===')
+                local ok6, getRankDecayData = pcall(function()
+                    return require(replicatedStorage.TS.rank['rank-decay-util']).getRankDecayData
+                end)
+                if ok6 then
+                    local ok7, decayData = pcall(getRankDecayData)
+                    log('getRankDecayData ok=' .. tostring(ok7) .. ' type=' .. type(decayData))
+                    if ok7 and type(decayData) == 'table' then
+                        dumpTable(decayData, '  decay', 0)
+                    else
+                        log('  result: ' .. tostring(decayData))
+                    end
+                end
+
+                setclipboard(table.concat(lines, '\n'))
+                notif('Rank Lookup', 'DEBUG 2 done — paste and send!', 5, 'info')
+            end)
+        end
+    })
+
+    RankLookup:CreateButton({
         Name = 'DEBUG Find RP',
         Tooltip = 'Collects all RP data sources and copies result to clipboard',
         Function = function()
