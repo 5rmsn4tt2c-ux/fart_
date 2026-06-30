@@ -15544,11 +15544,17 @@ run(function()
 
     local function depositAll(hive)
         local n = 0
+        local root = entitylib.character.RootPart
+        local originalCFrame = root.CFrame
+        -- Network-TP next to the hive so the server's proximity range check passes
+        root.CFrame = CFrame.new(hive.Position + Vector3.new(0, 3, 0))
+        task.wait(0.1)
         while getItem('bee') do
             pcall(fireproximityprompt, hive.ProximityPrompt)
             n += 1
             task.wait(0.08)
         end
+        root.CFrame = originalCFrame
         return n
     end
 
