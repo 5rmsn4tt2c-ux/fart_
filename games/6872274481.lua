@@ -11510,6 +11510,7 @@ end)
 run(function()
     local AutoPatch
     local Layers
+    local PlaceDelay
     local PatchRange
     local PatchSpeed
     local PatchSwitch
@@ -11519,7 +11520,7 @@ run(function()
         for _, item in store.inventory.inventory.items do
             local meta = bedwars.ItemMeta[item.itemType]
             local block = meta and meta.block
-            if block and (block.health or 0) > bestHealth then
+            if block and (block.health or 0) > bestHealth and getHotbar(item.tool) then
                 best = item
                 bestHealth = block.health
             end
@@ -11592,6 +11593,9 @@ run(function()
                 -- from multiple attackers all get patched immediately
                 -- instead of queueing behind one shared lock.
                 task.spawn(function()
+                    if PlaceDelay.Value > 0 then
+                        task.wait(PlaceDelay.Value / 1000)
+                    end
                     local old = store.hand and store.hand.tool and getHotbar(store.hand.tool) or nil
                     local switched = false
 
@@ -11625,12 +11629,18 @@ run(function()
         Tooltip = 'How many times in a row the same spot can be re-broken and still get patched'
     })
     PatchRange = AutoPatch:CreateSlider({
-        Name = 'Range',
-        Min = 6,
-        Max = 40,
-        Default = 12,
-        Suffix = function(v) return v == 1 and 'stud' or 'studs' end,
-        Tooltip = 'How far from the bed to detect and patch broken blocks'
+        Name = 'Place Range',
+        Min = 1,
+        Max = 30,
+        Default = 15,
+    })
+    PlaceDelay = AutoPatch:CreateSlider({
+        Name = 'Place Delay',
+        Min = 0,
+        Max = 500,
+        Default = 0,
+        Suffix = 'ms',
+        Tooltip = 'Delay before placing each patch block; increase to look less automatic'
     })
     PatchSpeed = AutoPatch:CreateSlider({
         Name = 'Speed',
@@ -11644,6 +11654,129 @@ run(function()
         Default = true,
         Tooltip = 'Switch hotbar to the strongest block before placing so the placement animation shows the block instead of your held item'
     })
+end)
+
+run(function()
+    local AutoBedProtector
+    local Blacklist
+    local Mode
+    local PlaceRange
+    local Switch
+
+    local function getBedNear()
+        local localPosition = entitylib.isAlive and entitylib.character.RootPart.Position or Vector3.zero
+        for _, v in collectionService:GetTagged('bed') do
+            if
+                (localPosition - v.Position).Magnitude < 14
+                and v:GetAttribute('Team' .. (lplr:GetAttribute('Team') or -1) .. 'NoBreak')
+            then
+                return v
+            end
+        end
+        return nil
+    end
+
+    local function getBlocks()
+        local blocks = {}
+        for _, item in store.inventory.inventory.items do
+            local block = bedwars.ItemMeta[item.itemType].block
+            if
+                block and not table.find(Blacklist.ListEnabled, item.itemType:find('wool') and 'wool' or item.itemType)
+            then
+                table.insert(blocks, { item.itemType, block.health, item.tool })
+            end
+        end
+        table.sort(blocks, function(a, b)
+            return a[2] > b[2]
+        end)
+        return blocks
+    end
+
+    local function getPyramid(size, grid)
+        local positions = {}
+        for h = size, 0, -1 do
+            for w = h, 0, -1 do
+                table.insert(positions, Vector3.new(w, (size - h), ((h + 1) - w)) * grid)
+                table.insert(positions, Vector3.new(w * -1, (size - h), ((h + 1) - w)) * grid)
+                table.insert(positions, Vector3.new(w, (size - h), (h - w) * -1) * grid)
+                table.insert(positions, Vector3.new(w * -1, (size - h), (h - w) * -1) * grid)
+            end
+        end
+        return positions
+    end
+
+    AutoBedProtector = vape.Categories.World:CreateModule({
+        Name = 'Auto Bed Protector',
+        Function = function(callback)
+            if callback then
+                repeat
+                    local bed = getBedNear()
+                    if bed then
+                        local blocks = getBlocks()
+                        if #blocks > 0 then
+                            local block = blocks[1]
+                            local switch, old = Switch.Enabled, store.hand and store.hand.tool and getHotbar(store.hand.tool) or nil
+                            local hotbar = nil
+
+                            if switch then
+                                hotbar = getHotbar(block[3])
+                            end
+
+                            for _, pos in getPyramid(1, 3) do
+                                if not AutoBedProtector.Enabled then
+                                    break
+                                end
+                                pos = (bed.CFrame * CFrame.new(pos)).Position
+                                if getPlacedBlock(pos) then
+                                    continue
+                                end
+                                if (entitylib.character.RootPart.Position - pos).Magnitude > PlaceRange.Value then
+                                    continue
+                                end
+                                if hotbar and hotbarSwitch(hotbar) then
+                                    task.wait()
+                                end
+                                task.spawn(bedwars.placeBlock, pos, block[1], false)
+                                task.wait(0.1)
+                            end
+
+                            if switch and old and hotbarSwitch(old) then
+                                task.wait()
+                            end
+                        end
+                    else
+                        if Mode.Value == 'On Key' then
+                            notif('AutoBedProtector', 'Unable to locate bed', 5)
+                            AutoBedProtector:Toggle()
+                        end
+                    end
+                    task.wait(0.5)
+                    if Mode.Value == 'On Key' then
+                        AutoBedProtector:Toggle()
+                        break
+                    end
+                until not AutoBedProtector.Enabled
+            end
+        end,
+        Tooltip = 'Automatically places strong blocks in a single layer around the bed.'
+    })
+
+    Mode = AutoBedProtector:CreateDropdown({
+        Name = 'Mode',
+        List = {'Toggle', 'On Key'},
+        Default = 'Toggle',
+    })
+    Blacklist = AutoBedProtector:CreateTextList({
+        Name = 'Blacklist',
+        Default = {'siege_tnt', 'tnt'},
+    })
+    PlaceRange = AutoBedProtector:CreateSlider({
+        Name = 'Place Range',
+        Min = 1,
+        Max = 30,
+        Default = 15,
+    })
+    Switch = AutoBedProtector:CreateToggle({Name = 'Auto Switch'})
 end)
 
 run(function()
