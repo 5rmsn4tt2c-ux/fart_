@@ -11660,7 +11660,7 @@ run(function()
     local RankLookup
     local Usernames
 
-    RankLookup = vape.Categories.Visual:CreateModule({
+    RankLookup = vape.Categories.Render:CreateModule({
         Name = 'Rank Lookup',
         Tooltip = 'Look up any player\'s rank and RP by username'
     })
