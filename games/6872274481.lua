@@ -11780,6 +11780,56 @@ run(function()
 end)
 
 run(function()
+    local RankLookup
+    local Usernames
+
+    RankLookup = vape.Categories.Visual:CreateModule({
+        Name = 'Rank Lookup',
+        Tooltip = 'Look up any player\'s rank and RP by username'
+    })
+
+    Usernames = RankLookup:CreateTextList({
+        Name = 'Usernames',
+    })
+
+    RankLookup:CreateButton({
+        Name = 'Lookup',
+        Tooltip = 'Fetch rank and RP for each username in the list above',
+        Function = function()
+            local list = Usernames.ListEnabled
+            if #list == 0 then
+                notif('Rank Lookup', 'Add at least one username to the list', 4, 'alert')
+                return
+            end
+            task.spawn(function()
+                for _, username in list do
+                    local ok, userId = pcall(game.Players.GetUserIdFromNameAsync, game.Players, username)
+                    if not ok or not userId then
+                        notif('Rank Lookup', username .. ': player not found', 4, 'alert')
+                        continue
+                    end
+                    local ok2, result = pcall(function()
+                        return bedwars.Client:Get('FetchRanks'):CallServer({userId})
+                    end)
+                    if not ok2 or typeof(result) ~= 'table' or not result[1] then
+                        notif('Rank Lookup', username .. ': no rank data', 4, 'alert')
+                        continue
+                    end
+                    local data = result[1]
+                    local division = data.rankDivision
+                    local rp = data.rp or data.rating or data.rankRp or '?'
+                    local rankName = division
+                        and bedwars.RankMeta[division]
+                        and (bedwars.RankMeta[division].name or division)
+                        or 'Unranked'
+                    notif('Rank Lookup', username .. ' — ' .. rankName .. ' (' .. tostring(rp) .. ' RP)', 8, 'info')
+                end
+            end)
+        end
+    })
+end)
+
+run(function()
     local BlockIn
     
     local rayCheck = RaycastParams.new()
