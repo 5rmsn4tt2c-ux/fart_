@@ -11702,6 +11702,97 @@ run(function()
             end)
         end
     })
+
+    RankLookup:CreateButton({
+        Name = 'DEBUG Find RP',
+        Tooltip = 'Dumps every possible RP data source to the developer console',
+        Function = function()
+            task.spawn(function()
+                -- 1. Full FetchRanks response for own account
+                warn('[RP] === FetchRanks self (all result entries) ===')
+                local ok, result = pcall(function()
+                    return bedwars.Client:Get('FetchRanks'):CallServer({lplr.UserId})
+                end)
+                warn('[RP] ok=' .. tostring(ok))
+                if ok and typeof(result) == 'table' then
+                    warn('[RP] #result=' .. #result)
+                    for i, entry in ipairs(result) do
+                        warn('[RP] result[' .. i .. '] keys:')
+                        for k, v in pairs(entry) do
+                            warn('[RP]   .' .. tostring(k) .. ' = ' .. tostring(v) .. ' (' .. typeof(v) .. ')')
+                        end
+                    end
+                else
+                    warn('[RP] result=' .. tostring(result))
+                end
+
+                -- 2. All top-level bedwars.Store state keys + Bedwars/Game/Player sub-trees
+                warn('[RP] === Store state ===')
+                local state = bedwars.Store:getState()
+                for k, v in pairs(state) do
+                    warn('[RP] Store.' .. tostring(k) .. ' (' .. typeof(v) .. ')')
+                    if typeof(v) == 'table' then
+                        for k2, v2 in pairs(v) do
+                            warn('[RP]   .' .. tostring(k2) .. ' = ' .. tostring(v2))
+                        end
+                    end
+                end
+
+                -- 3. lplr attributes
+                warn('[RP] === lplr attributes ===')
+                for k, v in pairs(lplr:GetAttributes()) do
+                    warn('[RP] attr.' .. tostring(k) .. ' = ' .. tostring(v))
+                end
+
+                -- 4. All modules inside replicatedStorage.TS.rank
+                warn('[RP] === replicatedStorage.TS.rank children ===')
+                local ok2, rankFolder = pcall(function() return replicatedStorage.TS.rank end)
+                if ok2 and rankFolder then
+                    for _, child in rankFolder:GetChildren() do
+                        warn('[RP] module: ' .. child.Name)
+                        local ok3, mod = pcall(require, child)
+                        if ok3 and type(mod) == 'table' then
+                            for k, v in pairs(mod) do
+                                warn('[RP]   .' .. tostring(k) .. ' (' .. type(v) .. ')')
+                                if type(v) == 'table' then
+                                    for k2, v2 in pairs(v) do
+                                        warn('[RP]     .' .. tostring(k2) .. ' = ' .. tostring(v2))
+                                    end
+                                end
+                            end
+                        else
+                            warn('[RP]   require failed: ' .. tostring(mod))
+                        end
+                    end
+                end
+
+                -- 5. Try alternative remote names that might expose RP
+                warn('[RP] === alternative remote probes ===')
+                for _, name in {'FetchRankRP', 'GetRankPoints', 'FetchPlayerStats', 'GetRankedData', 'FetchRankedData', 'GetPlayerRank', 'RankedStats', 'GetRankInfo', 'FetchRankData'} do
+                    local ok4, res = pcall(function()
+                        return bedwars.Client:Get(name):CallServer({lplr.UserId})
+                    end)
+                    warn('[RP] Remote "' .. name .. '" ok=' .. tostring(ok4) .. ' -> ' .. tostring(res))
+                end
+
+                -- 6. bedwars table keys containing rank/rp/rating
+                warn('[RP] === bedwars table rank-related keys ===')
+                for k, v in pairs(bedwars) do
+                    local lk = string.lower(tostring(k))
+                    if lk:find('rank') or lk:find('rp') or lk:find('rating') or lk:find('point') then
+                        warn('[RP] bedwars.' .. tostring(k) .. ' (' .. typeof(v) .. ')')
+                        if typeof(v) == 'table' then
+                            for k2, v2 in pairs(v) do
+                                warn('[RP]   .' .. tostring(k2) .. ' (' .. typeof(v2) .. ')')
+                            end
+                        end
+                    end
+                end
+
+                notif('Rank Lookup', 'RP debug done — open Developer Console (F9) and search [RP]', 6, 'info')
+            end)
+        end
+    })
 end)
 
 run(function()
