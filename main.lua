@@ -106,7 +106,7 @@ end
 if not isfile('fart/profiles/gui.txt') then
 	writefile('fart/profiles/gui.txt', 'new')
 end
-local gui = 'new'
+local gui = readfile('fart/profiles/gui.txt')
 
 if not isfolder('fart/assets/'..gui) then
 	makefolder('fart/assets/'..gui)

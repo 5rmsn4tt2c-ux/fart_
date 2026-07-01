@@ -3361,6 +3361,7 @@ function mainapi:Uninject()
 	mainapi.gui:ClearAllChildren()
 	mainapi.gui:Destroy()
 	table.clear(mainapi.Libraries)
+	table.clear(mainapi.Connections)
 	loopClean(mainapi)
 	shared.vape = nil
 	shared.vapereload = nil
