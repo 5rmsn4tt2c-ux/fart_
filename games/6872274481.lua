@@ -17686,34 +17686,6 @@ run(function()
 end)
 
 run(function()
-    local AutoNecromancer
-    local Delay
-
-    AutoNecromancer = vape.Categories.Kits:CreateModule({
-    	Name = 'Auto Necromancer',
-    	Function = function(callback)
-    		if callback then
-    			repeat
-    				if entitylib.isAlive and bedwars.AbilityController:canUseAbility('necromancer_swap') then
-    					bedwars.AbilityController:useAbility('necromancer_swap')
-    				end
-    				task.wait(Delay.Value)
-    			until not AutoNecromancer.Enabled
-    		end
-    	end,
-    	Tooltip = 'Automatically uses the necromancer swap ability'
-    })
-
-    Delay = AutoNecromancer:CreateSlider({
-    	Name = 'Delay',
-    	Min = 0,
-    	Max = 1,
-    	Default = 0.1,
-    	Decimal = 100
-    })
-end)
-
-run(function()
     local AutoPyro
 
     local list = {'Range', 'Heat', 'Power'}
