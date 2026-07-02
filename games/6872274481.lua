@@ -15772,7 +15772,7 @@ run(function()
     CollectRange = AutoBee:CreateSlider({
     	Name = 'Collect Range',
     	Min = 1,
-    	Max = 22,
+    	Max = 9999,
     	Default = 20,
     	Darker = true,
     	Suffix = function(val)
@@ -16925,7 +16925,7 @@ run(function()
         beekeeper = function()
             kitCollection('bee', function(v)
                 bedwars.Client:Get(remotes.BeePickup):SendToServer({beeId = v:GetAttribute('BeeId')})
-            end, 18, false)
+            end, 18, true)
         end,
         bigman = function()
             kitCollection('treeOrb', function(v)
